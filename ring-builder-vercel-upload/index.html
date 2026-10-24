@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Photorealistic luxury diamond ring head renderer using Three.js"
+    />
+    <title>Saanvi Atelier - Luxury Diamond Ring Builder 3D</title>
+    <style>
+      /* Critical styles for powered-by branding — loaded inline to avoid flash on first paint */
+      .powered-by {
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        z-index: 20;
+        background-color: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        padding: 8px 16px 8px 8px;
+        border-radius: 9999px;
+        box-shadow:
+          0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        transition: all 0.3s ease;
+        cursor: default;
+        text-decoration: none;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .powered-by:hover {
+        background-color: white;
+      }
+      .logo-container {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #f9fafb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid #f3f4f6;
+      }
+      .logo-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .branding-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .branding-label {
+        font-size: 10px;
+        color: #9ca3af;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
+      .branding-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1a202c;
+        letter-spacing: -0.025em;
+        line-height: 1;
+      }
+      @media (max-width: 768px) {
+        .powered-by {
+          top: 16px;
+          left: 16px;
+          padding: 6px 12px 6px 6px;
+          gap: 8px;
+        }
+        .logo-container {
+          width: 28px;
+          height: 28px;
+        }
+        .branding-label {
+          font-size: 9px;
+        }
+        .branding-name {
+          font-size: 12px;
+        }
+      }
+      @media (max-width: 480px) {
+        .powered-by {
+          top: 12px;
+          left: 12px;
+          padding: 4px 10px 4px 4px;
+          gap: 6px;
+        }
+        .logo-container {
+          width: 24px;
+          height: 24px;
+        }
+        .branding-label {
+          font-size: 8px;
+        }
+        .branding-name {
+          font-size: 11px;
+        }
+      }
+    </style>
+    <script>
+      // Populate branding from URL params before render to avoid flash
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const logoParam = params.get("logo");
+        const siteNameParam = params.get("siteName") || params.get("site_name");
+        const poweredByParam = params.get("poweredBy");
+
+        const DEFAULT_LOGO = "/public/images/logo.webp";
+        const DEFAULT_SITE_NAME = "Sapphire Tree";
+
+        var logoSrc = logoParam || DEFAULT_LOGO;
+        var siteName = siteNameParam || DEFAULT_SITE_NAME;
+
+        var showPoweredBy = poweredByParam === "true";
+
+        if (showPoweredBy) {
+          document.write(
+            '<div class="powered-by" style="user-select: none; -webkit-user-select: none;">' +
+              '<div class="logo-container">' +
+              '<img id="branding-logo" src="' +
+              logoSrc +
+              '" alt="' +
+              siteName +
+              '" />' +
+              "</div>" +
+              '<div class="branding-text">' +
+              '<span class="branding-label">Powered by</span>' +
+              '<span class="branding-name" id="branding-name">' +
+              siteName +
+              "</span>" +
+              "</div>" +
+              "</div>",
+          );
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="error-message" style="display: none">
+      <h2>Ring Not Found</h2>
+      <p>Please check your configuration.</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

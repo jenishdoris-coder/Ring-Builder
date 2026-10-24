@@ -1,0 +1,768 @@
+{
+  "shapes": [
+    {
+      "id": "round",
+      "name": "Round",
+      "folder": "4 PRONG TALON ROUND",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 1CT.glb",
+          "filename": "4 PRONG TALON ROUND 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 1.5CT.glb",
+          "filename": "4 PRONG TALON ROUND 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 2CT.glb",
+          "filename": "4 PRONG TALON ROUND 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 2.5CT.glb",
+          "filename": "4 PRONG TALON ROUND 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 3CT.glb",
+          "filename": "4 PRONG TALON ROUND 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 3.5CT.glb",
+          "filename": "4 PRONG TALON ROUND 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ROUND/4 PRONG TALON ROUND 4CT.glb",
+          "filename": "4 PRONG TALON ROUND 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "oval",
+      "name": "Oval",
+      "folder": "4 PRONG TALON OVAL",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 1CT.glb",
+          "filename": "4 PRONG TALON OVAL 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 1.5CT.glb",
+          "filename": "4 PRONG TALON OVAL 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 2CT.glb",
+          "filename": "4 PRONG TALON OVAL 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 2.5CT.glb",
+          "filename": "4 PRONG TALON OVAL 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 3CT.glb",
+          "filename": "4 PRONG TALON OVAL 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 3.5CT.glb",
+          "filename": "4 PRONG TALON OVAL 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON OVAL/4 PRONG TALON OVAL 4CT.glb",
+          "filename": "4 PRONG TALON OVAL 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "emerald",
+      "name": "Emerald",
+      "folder": "4 PRONG TALON EMERALD",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 1CT.glb",
+          "filename": "4 PRONG TALON EMERALD 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 1.5CT.glb",
+          "filename": "4 PRONG TALON EMERALD 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 2CT.glb",
+          "filename": "4 PRONG TALON EMERALD 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 2.5CT.glb",
+          "filename": "4 PRONG TALON EMERALD 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 3CT.glb",
+          "filename": "4 PRONG TALON EMERALD 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 3.5CT.glb",
+          "filename": "4 PRONG TALON EMERALD 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON EMERALD/4 PRONG TALON EMERALD 4CT.glb",
+          "filename": "4 PRONG TALON EMERALD 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "cushion",
+      "name": "Cushion",
+      "folder": "4 PRONG TALON CUSHION",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 1CT.glb",
+          "filename": "4 PRONG TALON CUSHION 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 1.5CT.glb",
+          "filename": "4 PRONG TALON CUSHION 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 2CT.glb",
+          "filename": "4 PRONG TALON CUSHION 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 2.5CT.glb",
+          "filename": "4 PRONG TALON CUSHION 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 3CT.glb",
+          "filename": "4 PRONG TALON CUSHION 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 3.5CT.glb",
+          "filename": "4 PRONG TALON CUSHION 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON CUSHION/4 PRONG TALON CUSHION 4CT.glb",
+          "filename": "4 PRONG TALON CUSHION 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "pear",
+      "name": "Pear",
+      "folder": "4 PRONG TALON PEAR",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 1CT.glb",
+          "filename": "4 PRONG TALON PEAR 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 1.5CT.glb",
+          "filename": "4 PRONG TALON PEAR 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 2CT.glb",
+          "filename": "4 PRONG TALON PEAR 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 2.5CT.glb",
+          "filename": "4 PRONG TALON PEAR 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 3CT.glb",
+          "filename": "4 PRONG TALON PEAR 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 3.5CT.glb",
+          "filename": "4 PRONG TALON PEAR 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PEAR/4 PRONG TALON PEAR 4CT.glb",
+          "filename": "4 PRONG TALON PEAR 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "princess",
+      "name": "Princess",
+      "folder": "4 PRONG TALON PRINCESS",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON PRINCESS 1CT.glb",
+          "filename": "4 PRONG TALON PRINCESS 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON PRINCESS 1.5CT.glb",
+          "filename": "4 PRONG TALON PRINCESS 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON  PRINCESS 2CT.glb",
+          "filename": "4 PRONG TALON  PRINCESS 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON  PRINCESS 2.5CT.glb",
+          "filename": "4 PRONG TALON  PRINCESS 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON  PRINCESS 3CT.glb",
+          "filename": "4 PRONG TALON  PRINCESS 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON  PRINCESS 3.5CT.glb",
+          "filename": "4 PRONG TALON  PRINCESS 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON PRINCESS/4 PRONG TALON  PRINCESS 4CT.glb",
+          "filename": "4 PRONG TALON  PRINCESS 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "radiant",
+      "name": "Radiant",
+      "folder": "4 PRONG TALON RADIANT",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 1CT.glb",
+          "filename": "4 PRONG TALON RADIANT 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 1.5CT.glb",
+          "filename": "4 PRONG TALON RADIANT 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 2CT.glb",
+          "filename": "4 PRONG TALON RADIANT 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 2.5CT.glb",
+          "filename": "4 PRONG TALON RADIANT 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 3CT.glb",
+          "filename": "4 PRONG TALON RADIANT 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT 3.5CT.glb",
+          "filename": "4 PRONG TALON RADIANT 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON RADIANT/4 PRONG TALON RADIANT  4CT.glb",
+          "filename": "4 PRONG TALON RADIANT  4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "asscher",
+      "name": "Asscher",
+      "folder": "4 PRONG TALON ASSCHER",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON ASSCHER 1CT.glb",
+          "filename": "4 PRONG TALON ASSCHER 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON ASSCHER 1.5CT.glb",
+          "filename": "4 PRONG TALON ASSCHER 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON  ASSCHER 2CT.glb",
+          "filename": "4 PRONG TALON  ASSCHER 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON  ASSCHER 2.5CT.glb",
+          "filename": "4 PRONG TALON  ASSCHER 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON  ASSCHER 3CT.glb",
+          "filename": "4 PRONG TALON  ASSCHER 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON  ASSCHER 3.5CT.glb",
+          "filename": "4 PRONG TALON  ASSCHER 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON ASSCHER/4 PRONG TALON ASSCHER 4CT.glb",
+          "filename": "4 PRONG TALON ASSCHER 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "marquise",
+      "name": "Marquise",
+      "folder": "4 PRONG TALON MARQUISE",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 1CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 1.5CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 2CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 2.5CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 3CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 3.5CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON MARQUISE/4 PRONG TALON MARQUISE 4CT.glb",
+          "filename": "4 PRONG TALON MARQUISE 4CT.glb"
+        }
+      ]
+    },
+    {
+      "id": "heart",
+      "name": "Heart",
+      "folder": "4 PRONG TALON HEART",
+      "carats": [
+        {
+          "carat": 1,
+          "label": "1 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON HEART 1CT.glb",
+          "filename": "4 PRONG TALON HEART 1CT.glb"
+        },
+        {
+          "carat": 1.5,
+          "label": "1.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON HEART 1.5CT.glb",
+          "filename": "4 PRONG TALON HEART 1.5CT.glb"
+        },
+        {
+          "carat": 2,
+          "label": "2 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON  HEART 2CT.glb",
+          "filename": "4 PRONG TALON  HEART 2CT.glb"
+        },
+        {
+          "carat": 2.5,
+          "label": "2.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON  HEART 2.5CT.glb",
+          "filename": "4 PRONG TALON  HEART 2.5CT.glb"
+        },
+        {
+          "carat": 3,
+          "label": "3 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON  HEART 3CT.glb",
+          "filename": "4 PRONG TALON  HEART 3CT.glb"
+        },
+        {
+          "carat": 3.5,
+          "label": "3.5 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON  HEART 3.5CT.glb",
+          "filename": "4 PRONG TALON  HEART 3.5CT.glb"
+        },
+        {
+          "carat": 4,
+          "label": "4 CT",
+          "file": "/models/4 PRONG/4 PRONG TALON HEART/4 PRONG TALON  HEART 4CT.glb",
+          "filename": "4 PRONG TALON  HEART 4CT.glb"
+        }
+      ]
+    }
+  ],
+  "shanks": [
+    {
+      "id": "bypass",
+      "name": "Bypass",
+      "rawName": "BYPASS",
+      "file": "/models/Shank/BYPASS.glb",
+      "category": "Twist & Curved"
+    },
+    {
+      "id": "channel-set",
+      "name": "Channel Set",
+      "rawName": "CHANNEL SET",
+      "file": "/models/Shank/CHANNEL SET.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "collar",
+      "name": "Collar",
+      "rawName": "Collar",
+      "file": "/models/Shank/Collar.glb",
+      "category": "Cathedral & Architectural"
+    },
+    {
+      "id": "curve",
+      "name": "Curve",
+      "rawName": "CURVE",
+      "file": "/models/Shank/CURVE.glb",
+      "category": "Twist & Curved"
+    },
+    {
+      "id": "demi-eternity",
+      "name": "Demi Eternity",
+      "rawName": "Demi Eternity",
+      "file": "/models/Shank/Demi Eternity.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "diamond-arch",
+      "name": "Diamond Arch",
+      "rawName": "Diamond Arch",
+      "file": "/models/Shank/Diamond Arch.glb",
+      "category": "Cathedral & Architectural"
+    },
+    {
+      "id": "double-baguette",
+      "name": "Double Baguette",
+      "rawName": "DOUBLE BAGUETTE",
+      "file": "/models/Shank/DOUBLE BAGUETTE.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "double-row",
+      "name": "Double Row",
+      "rawName": "DOUBLE ROW",
+      "file": "/models/Shank/DOUBLE ROW.glb",
+      "category": "Multi-Row Band"
+    },
+    {
+      "id": "double-row-side-stone",
+      "name": "Double Row Side Stone",
+      "rawName": "DOUBLE ROW SIDE STONE",
+      "file": "/models/Shank/DOUBLE ROW SIDE STONE.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "double-twist",
+      "name": "Double Twist",
+      "rawName": "DOUBLE TWIST",
+      "file": "/models/Shank/DOUBLE TWIST.glb",
+      "category": "Twist & Curved"
+    },
+    {
+      "id": "east-west-knife-edge",
+      "name": "East West Knife Edge",
+      "rawName": "EAST WEST KNIFE EDGE",
+      "file": "/models/Shank/EAST WEST KNIFE EDGE.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "etched-rope",
+      "name": "Etched Rope",
+      "rawName": "ETCHED ROPE",
+      "file": "/models/Shank/ETCHED ROPE.glb",
+      "category": "Floral & Textured"
+    },
+    {
+      "id": "floating--pear-pave",
+      "name": "Floating  Pear Pave",
+      "rawName": "FLOATING  PEAR PAVE",
+      "file": "/models/Shank/FLOATING  PEAR PAVE.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "floating-marquise-shank",
+      "name": "Floating Marquise Shank",
+      "rawName": "FLOATING MARQUISE SHANK",
+      "file": "/models/Shank/FLOATING MARQUISE SHANK.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "floating-shank",
+      "name": "Floating Shank",
+      "rawName": "FLOATING SHANK",
+      "file": "/models/Shank/FLOATING SHANK.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "flower-petal",
+      "name": "Flower Petal",
+      "rawName": "Flower Petal",
+      "file": "/models/Shank/Flower Petal.glb",
+      "category": "Floral & Textured"
+    },
+    {
+      "id": "framed-trapezoid",
+      "name": "Framed Trapezoid",
+      "rawName": "Framed Trapezoid",
+      "file": "/models/Shank/Framed Trapezoid.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "french-pave",
+      "name": "French Pave",
+      "rawName": "French Pave",
+      "file": "/models/Shank/French Pave.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "gemstone-scatter",
+      "name": "Gemstone Scatter",
+      "rawName": "GEMSTONE SCATTER",
+      "file": "/models/Shank/GEMSTONE SCATTER.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "graduated-shank",
+      "name": "Graduated Shank",
+      "rawName": "Graduated Shank",
+      "file": "/models/Shank/Graduated Shank.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "half-moon-shank",
+      "name": "Half Moon Shank",
+      "rawName": "HALF MOON SHANK",
+      "file": "/models/Shank/HALF MOON SHANK.glb",
+      "category": "Cathedral & Architectural"
+    },
+    {
+      "id": "half-moon-side-stone",
+      "name": "Half Moon Side Stone",
+      "rawName": "HALF MOON SIDE STONE",
+      "file": "/models/Shank/HALF MOON SIDE STONE.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "knife-edge-shank",
+      "name": "Knife Edge Shank",
+      "rawName": "KNIFE EDGE SHANK",
+      "file": "/models/Shank/KNIFE EDGE SHANK.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "marquise-vine",
+      "name": "Marquise Vine",
+      "rawName": "MARQUISE VINE",
+      "file": "/models/Shank/MARQUISE VINE.glb",
+      "category": "Floral & Textured"
+    },
+    {
+      "id": "riviera-shank",
+      "name": "Riviera Shank",
+      "rawName": "RIVIERA SHANK",
+      "file": "/models/Shank/RIVIERA SHANK.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "royal-crow",
+      "name": "Royal Crow",
+      "rawName": "ROYAL CROW",
+      "file": "/models/Shank/ROYAL CROW.glb",
+      "category": "Multi-Row Band"
+    },
+    {
+      "id": "split-cathredral",
+      "name": "Split Cathredral",
+      "rawName": "SPLIT CATHREDRAL",
+      "file": "/models/Shank/SPLIT CATHREDRAL.glb",
+      "category": "Cathedral & Architectural"
+    },
+    {
+      "id": "split-prong",
+      "name": "Split Prong",
+      "rawName": "SPLIT PRONG",
+      "file": "/models/Shank/SPLIT PRONG.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "tapered-baguette-shank",
+      "name": "Tapered Baguette Shank",
+      "rawName": "TAPERED BAGUETTE SHANK",
+      "file": "/models/Shank/TAPERED BAGUETTE SHANK.glb",
+      "category": "Pavé & Diamond Accent"
+    },
+    {
+      "id": "traditional-solitaire",
+      "name": "Traditional Solitaire",
+      "rawName": "Traditional Solitaire",
+      "file": "/models/Shank/Traditional Solitaire.glb",
+      "category": "Solitaire & Classic"
+    },
+    {
+      "id": "triple-row",
+      "name": "Triple Row",
+      "rawName": "TRIPLE ROW",
+      "file": "/models/Shank/TRIPLE ROW.glb",
+      "category": "Multi-Row Band"
+    },
+    {
+      "id": "triple-wave",
+      "name": "Triple Wave",
+      "rawName": "TRIPLE WAVE",
+      "file": "/models/Shank/TRIPLE WAVE.glb",
+      "category": "Twist & Curved"
+    },
+    {
+      "id": "twist",
+      "name": "Twist",
+      "rawName": "twist",
+      "file": "/models/Shank/twist.glb",
+      "category": "Twist & Curved"
+    },
+    {
+      "id": "willow",
+      "name": "Willow",
+      "rawName": "willow",
+      "file": "/models/Shank/willow.glb",
+      "category": "Solitaire & Classic"
+    }
+  ],
+  "metals": [
+    {
+      "id": "white_gold",
+      "name": "14K White Gold",
+      "hexCode": "#C2C2C3",
+      "previewColor": "#C2C2C3",
+      "gradient": "linear-gradient(135deg, #FFFFFF 0%, #D8D8DA 50%, #A8A8AC 100%)",
+      "description": "Lustrous cool tone with brilliant rhodium sheen"
+    },
+    {
+      "id": "yellow_gold",
+      "name": "18K Yellow Gold",
+      "hexCode": "#E3BB5E",
+      "previewColor": "#E3BB5E",
+      "gradient": "linear-gradient(135deg, #FFE89E 0%, #E3BB5E 50%, #B88E28 100%)",
+      "description": "Warm, radiant classic luxury gold"
+    },
+    {
+      "id": "rose_gold",
+      "name": "18K Rose Gold",
+      "hexCode": "#D9A483",
+      "previewColor": "#D9A483",
+      "gradient": "linear-gradient(135deg, #FFCEB5 0%, #D9A483 50%, #B07452 100%)",
+      "description": "Romantic warm blush with copper undertones"
+    }
+  ],
+  "defaults": {
+    "shapeId": "round",
+    "carat": 2,
+    "shankId": "traditional-solitaire",
+    "metalId": "white_gold",
+    "headScale": 0.17,
+    "shankScale": 0.17
+  }
+}

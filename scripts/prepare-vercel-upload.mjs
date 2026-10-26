@@ -14,7 +14,7 @@ try {
 await mkdir(output, { recursive: true });
 
 const roots = ["src", "api", "scripts"];
-const topFiles = ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vercel.json", "index.html", ".gitignore", ".vercelignore", ".env.example", "README.md", "DEPLOY_VERCEL.md"];
+const topFiles = ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vercel.json", "index.html", ".gitignore", ".vercelignore", ".env.example", "README.md", "DEPLOY_VERCEL.md", "THIRD_PARTY_ASSETS.md"];
 const files = [];
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {

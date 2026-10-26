@@ -3,7 +3,7 @@ import type { Object3D } from "webgi";
 // =============================================================================
 // ENVIRONMENT MAP
 // =============================================================================
-export const ENV_MAP_ROTATION = 0;
+export const ENV_MAP_ROTATION = 15 * Math.PI / 180;
 
 // =============================================================================
 // DIAMOND MESH IDENTIFICATION — DiamondPlugin keywords / exact names
@@ -50,6 +50,7 @@ export function applyDiamondShaderProps(mat: any) {
   if ("ior" in mat) mat.ior = DIAMOND_GEM.ior;
   if ("dispersion" in mat) mat.dispersion = matCfg.dispersion;
   if ("envMapIntensity" in mat) mat.envMapIntensity = matCfg.envMapIntensity;
+  if ("envMapRotationOffset" in mat) mat.envMapRotationOffset = ENV_MAP_ROTATION;
   if ("reflectivity" in mat) mat.reflectivity = matCfg.reflectivity;
   if ("gammaFactor" in mat) mat.gammaFactor = DIAMOND_GEM.gammaFactor;
   if ("boostFactors" in mat) {
@@ -59,6 +60,11 @@ export function applyDiamondShaderProps(mat: any) {
   mat.userData = {
     ...mat.userData,
     ssreflDisabled: true,
+    // Transparent stones must not cast the opaque screen-space occlusion of
+    // a solid metal object onto the setting beside the centre diamond.
+    ssaoCastDisabled: true,
+    ssaoDisabled: true,
+    sscsDisabled: true,
     Bloom: { enable: false },
   };
   mat.setDirty?.();
@@ -83,6 +89,7 @@ export function buildDiamondPluginAddOptions() {
       reflectivity: DIAMOND_GEM.reflectivity,
       boostFactors: DIAMOND_GEM.boostFactors,
       envMapRotation: ENV_MAP_ROTATION,
+      envMapRotationOffset: ENV_MAP_ROTATION,
       diamondOrientedEnvMap: 0,
       color: "#ffffff",
     },

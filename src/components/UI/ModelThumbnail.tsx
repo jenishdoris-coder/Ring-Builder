@@ -1,21 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import thumbnails from "../../config/modelThumbnails.json";
+import { assetUrl } from "../../config/assets";
+
+const images: Record<string, string> = thumbnails.images;
 
 export const ModelThumbnail = ({ file, kind, label }: { file: string; kind: "head" | "shank"; label: string }) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [image, setImage] = useState<{ file: string; url: string }>();
-  useEffect(() => {
-    let active = true;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some(entry => entry.isIntersecting)) return;
-      observer.disconnect();
-      import("../../utils/modelThumbnail").then(module => module.getModelThumbnail(file, kind)).then((url) => {
-        if (active) setImage({ file, url });
-      }).catch((error) => console.warn("Model thumbnail unavailable", file, error));
-    }, { rootMargin: "180px" });
-    if (ref.current) observer.observe(ref.current);
-    return () => { active = false; observer.disconnect(); };
-  }, [file, kind]);
-  return <span className="option-model-image" ref={ref}>
-    {image?.file === file ? <img src={image.url} alt={label} /> : <span className="model-image-placeholder" aria-hidden="true" />}
+  // Catalog URLs include an R2 release prefix; the original model path stays stable.
+  const pathname = decodeURIComponent(new URL(file, "https://ring-builder.local").pathname);
+  const start = pathname.indexOf("/models/");
+  const path = images[`${kind}:${start >= 0 ? pathname.slice(start) : pathname}`];
+  const url = path && (import.meta.env.DEV ? path : assetUrl(path));
+  return <span className="option-model-image">
+    {url ? <img src={url} alt={label} loading="lazy" decoding="async" width={thumbnails.width} height={thumbnails.height} /> : <span className="model-image-placeholder" aria-hidden="true" />}
   </span>;
 };

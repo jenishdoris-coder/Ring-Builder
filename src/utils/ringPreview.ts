@@ -1,14 +1,28 @@
 import { Box3, CameraController, DoubleSide, Euler, Matrix4, MeshBasicMaterial, PerspectiveCamera, Quaternion, Vector3 } from "webgi";
+import type { RingCameraPose } from "./ringCameraViews";
+import type { EngravingPosition } from "../config/engraving";
 
-export type RingPreviewImage = { id: string; label: string; url: string };
+export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
+export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition };
 export const RING_PREVIEW_RESOLUTION = 1200;
-export const RING_PREVIEW_VERSION = "studio-1200-white-v4";
+export const RING_PREVIEW_VERSION = "studio-1200-multiple-engraving-v11";
+
+/** Render just the enlarged photograph at a resolution suited to 3x zoom. */
+export const getRingDetailResolution = () => {
+  const mobile = window.innerWidth <= 768;
+  const required = Math.ceil(Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8) * Math.min(window.devicePixelRatio || 1, 2) * 3 / 256) * 256;
+  return Math.min(mobile ? 2048 : 3072, Math.max(mobile ? 1800 : 2400, required));
+};
 
 export const RING_PREVIEW_VIEWS = [
   { id: "three-quarter", label: "Three-quarter view", direction: [0.8, 0.4, -1], up: [0, 1, 0], lying: false },
   { id: "top", label: "Diamond view", direction: [1, 0.16, 0], up: [0, 1, 0], lying: true },
   { id: "profile", label: "Side profile", direction: [0.08, 0.38, 1], up: [0, 1, 0], lying: true },
 ] as const;
+
+export const getRingPreviewViews = (engraved: boolean) => engraved
+  ? [...RING_PREVIEW_VIEWS.slice(0, 2), { ...RING_PREVIEW_VIEWS[2], id: "engraving", label: "Engraving detail" }]
+  : [...RING_PREVIEW_VIEWS];
 
 const saveTransform = (object: any) => ({
   position: object.position.clone(), quaternion: object.quaternion.clone(), scale: object.scale.clone(),
@@ -165,7 +179,8 @@ export const createRingPhotoStage = (roots: any[], ground?: any) => {
   };
 };
 
-export const fitPreviewCamera = (camera: any, bounds: Box3, direction: Vector3, up: Vector3, aspect: number) => {
+export const fitPreviewCamera = (camera: any, bounds: Box3, direction: Vector3, up: Vector3, aspect: number, roots?: any[], centerOutline = false) => {
+  camera.clearViewOffset();
   const center = bounds.getCenter(new Vector3());
   const size = bounds.getSize(new Vector3());
   const distance = size.length() * 1.8;
@@ -179,18 +194,53 @@ export const fitPreviewCamera = (camera: any, bounds: Box3, direction: Vector3, 
   const inverse = camera.matrixWorldInverse;
   const halfFov = Math.tan((camera.fov * Math.PI) / 360);
   let requiredDistance = 0;
-  for (const x of [bounds.min.x, bounds.max.x]) {
-    for (const y of [bounds.min.y, bounds.max.y]) {
-      for (const z of [bounds.min.z, bounds.max.z]) {
-        const point = new Vector3(x, y, z).applyMatrix4(inverse);
-        requiredDistance = Math.max(requiredDistance, Math.abs(point.y) / halfFov + point.z + distance, Math.abs(point.x) / (halfFov * aspect) + point.z + distance);
+  const point = new Vector3();
+  const fitPoint = () => {
+    point.applyMatrix4(inverse);
+    requiredDistance = Math.max(requiredDistance, Math.abs(point.y) / halfFov + point.z + distance, Math.abs(point.x) / (halfFov * aspect) + point.z + distance);
+  };
+  if (roots) {
+    // A small CPU geometry pass avoids the empty corners of the assembly's
+    // bounding box: more ring detail fits into the same 1200px render budget.
+    roots.forEach(root => root.traverseVisible((mesh: any) => {
+      const vertices = mesh.isMesh && mesh.geometry?.attributes.position;
+      if (!vertices) return;
+      for (let index = 0; index < vertices.count; index++) {
+        point.fromBufferAttribute(vertices, index).applyMatrix4(mesh.matrixWorld);
+        fitPoint();
       }
+    }));
+  } else {
+    for (const x of [bounds.min.x, bounds.max.x]) for (const y of [bounds.min.y, bounds.max.y]) for (const z of [bounds.min.z, bounds.max.z]) {
+      point.set(x, y, z);
+      fitPoint();
     }
   }
-  camera.position.copy(center).addScaledVector(direction.clone().normalize(), requiredDistance * 1.12);
+  camera.position.copy(center).addScaledVector(direction.clone().normalize(), requiredDistance * (roots ? 1.24 : 1.12));
   camera.lookAt(center);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld(true);
+  if (centerOutline && roots?.length) {
+    // A world-space box centre is not the centre of a perspective silhouette.
+    // Shift the image plane using the rendered geometry's projected outline,
+    // preserving the existing viewing angle, scale and floor contact.
+    const clipFromWorld = new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    roots.forEach(root => root.traverseVisible((mesh: any) => {
+      const vertices = mesh.isMesh && mesh.geometry?.attributes.position;
+      if (!vertices) return;
+      const clipFromMesh = new Matrix4().multiplyMatrices(clipFromWorld, mesh.matrixWorld);
+      for (let index = 0; index < vertices.count; index++) {
+        point.fromBufferAttribute(vertices, index).applyMatrix4(clipFromMesh);
+        minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x);
+        minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
+      }
+    }));
+    if (Number.isFinite(minX) && Number.isFinite(minY)) {
+      const height = 1000, width = height * aspect;
+      camera.setViewOffset(width, height, (minX + maxX) * width / 4, -(minY + maxY) * height / 4, width, height);
+    }
+  }
 };
 
 const orientImage = async (url: string) => {
@@ -204,7 +254,7 @@ const orientImage = async (url: string) => {
   context.translate(0, canvas.height);
   context.scale(1, -1);
   context.drawImage(image, 0, 0);
-  return canvas.toDataURL("image/webp", 0.98);
+  return canvas.toDataURL("image/webp", 1);
 };
 
 const preserveLiveFrame = (canvas: HTMLCanvasElement) => {
@@ -219,18 +269,20 @@ const preserveLiveFrame = (canvas: HTMLCanvasElement) => {
 };
 
 /** Render product photos off-screen through the same metal/diamond pipeline. */
-export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal): Promise<RingPreviewImage[]> => {
+export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal, options: { viewId?: string; resolution?: number; engraving?: { cameraPose: (camera: any) => RingCameraPose | undefined; position?: EngravingPosition } } = {}): Promise<RingPreviewImage[]> => {
   const scene = viewer.scene;
   const renderer = viewer.renderer;
   const progressive = viewer.getPluginByType?.("Progressive");
   const ground = viewer.getPluginByType?.("ContactShadowGroundPlugin");
+  const originalGroundVisible = ground?.visible;
   const originalCamera = scene.renderCamera;
   const originalRenderToScreen = renderer.defaultRenderToScreen;
   const originalRenderEnabled = viewer.renderEnabled;
   const originalProgressive = progressive?.enabled;
   const originalSize = { width: renderer.renderSize.x, height: renderer.renderSize.y };
   const scale = renderer.displayCanvasScaling || 1;
-  const resolution = Math.min(RING_PREVIEW_RESOLUTION, renderer.rendererObject?.capabilities.maxTextureSize ?? RING_PREVIEW_RESOLUTION);
+  const requestedResolution = options.resolution ?? RING_PREVIEW_RESOLUTION;
+  const resolution = Math.min(requestedResolution, renderer.rendererObject?.capabilities.maxTextureSize ?? requestedResolution);
   const aspect = 1;
   const camera = new CameraController(new PerspectiveCamera(25, aspect, 0.01, 100), { controlsMode: "", controlsEnabled: false, aspect, fov: 25 }, viewer.canvas);
   if (!roots.length || ringBounds(roots).isEmpty()) { camera.dispose(); return []; }
@@ -241,6 +293,7 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
     if (restored) return;
     restored = true;
     stage.restore();
+    if (ground) ground.visible = originalGroundVisible;
     scene.renderCamera = originalCamera;
     renderer.setSize(viewer.canvas.clientWidth || originalSize.width, viewer.canvas.clientHeight || originalSize.height, true);
     renderer.defaultRenderToScreen = originalRenderToScreen;
@@ -261,16 +314,26 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
     // Resize every render target through WebGI, including the shared depth buffer.
     renderer.setSize(resolution / scale, resolution / scale, true);
     const images: RingPreviewImage[] = [];
-    for (const view of RING_PREVIEW_VIEWS) {
+    for (const view of getRingPreviewViews(Boolean(options.engraving)).filter(view => !options.viewId || view.id === options.viewId)) {
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       // A user may expand the live canvas while the previous image decodes.
       renderer.setSize(resolution / scale, resolution / scale);
+      if (ground) ground.visible = view.id !== "engraving";
       const bounds = stage.pose(view.lying);
+      if (view.id === "engraving" && ground?.mesh?.modelObject) ground.mesh.modelObject.visible = false;
       const direction = new Vector3(...view.direction);
       const up = new Vector3(...view.up);
-      fitPreviewCamera(camera.cameraObject, bounds, direction, up, aspect);
+      const engravingPose = view.id === "engraving" ? options.engraving?.cameraPose(camera.cameraObject) : undefined;
+      if (engravingPose) {
+        camera.cameraObject.clearViewOffset();
+        camera.cameraObject.up.copy(engravingPose.up);
+        camera.cameraObject.position.copy(engravingPose.position);
+        camera.cameraObject.lookAt(engravingPose.target);
+        camera.cameraObject.updateProjectionMatrix();
+        camera.cameraObject.updateMatrixWorld(true);
+      } else fitPreviewCamera(camera.cameraObject, bounds, direction, up, aspect, roots, view.lying);
       camera.position.copy(camera.cameraObject.position);
-      camera.target.copy(bounds.getCenter(new Vector3()));
+      camera.target.copy(engravingPose?.target ?? bounds.getCenter(new Vector3()));
       renderer.reset();
       for (let frame = 0; frame < 2; frame++) {
         viewer.dispatchEvent({ type: "preRender", target: viewer });
@@ -282,7 +345,7 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
       const target = renderer.composer.readBuffer;
       const url = await orientImage(renderer.renderTargetToDataUrl(target, "image/png"));
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
-      images.push({ id: view.id, label: view.label, url });
+      images.push({ id: view.id, label: view.label, url, width: resolution, height: resolution, ...(view.id === "engraving" ? { engravingPosition: options.engraving?.position } : {}) });
     }
     return images;
   } finally {

@@ -1,0 +1,17 @@
+{
+  "file": "/models/hand/female_hand.glb",
+  "ringFinger": {
+    "anchor": [-1.77500968, -1.49109438, 18.20428006],
+    "axis": [-0.00399997, -0.21999821, 0.97549207],
+    "dorsal": [-0.00090209, 0.97550027, 0.21999636],
+    "rollDegrees": 8,
+    "radius": 0.89626938,
+    "clearance": 0.995
+  },
+  "credit": {
+    "author": "deep3dstudio",
+    "source": "https://sketchfab.com/3d-models/female-hand-3e9b8ad1942048e3a267d92fb1124d46",
+    "license": "CC BY-NC 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-nc/4.0/"
+  }
+}

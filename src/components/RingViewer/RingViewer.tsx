@@ -19,11 +19,14 @@ import {
   InteractionPromptPlugin,
   LoadingScreenPlugin,
   LUTPlugin,
+  Matrix4,
   Object3D,
   ProgressivePlugin,
+  Quaternion,
   RandomizedDirectionalLightPlugin,
   TemporalAAPlugin,
   TonemapPlugin,
+  Vector3,
   mobileAndTabletCheck,
 } from "webgi";
 
@@ -52,6 +55,7 @@ import {
   CAMERA_MAX_DISTANCE_DESKTOP,
   CAMERA_MIN_DISTANCE_MOBILE,
   CAMERA_MAX_DISTANCE_MOBILE,
+  CAMERA_AUTO_ROTATE_SPEED,
   ENABLE_MSAA,
   BACKGROUND_COLOR,
   CUSTOM_METAL_ENV_URL,
@@ -90,6 +94,7 @@ import {
   refreshDiamondPluginEnvOnly,
   ensureSSRDisabled,
   disableSSRPlugin,
+  configureRingOcclusion,
   disableViewerGltfAnimations,
   disableModelGltfAnimations,
   setSubtreeCastShadow,
@@ -115,7 +120,13 @@ import {
   type RingDissolveTransition,
 } from "../../utils/ringDissolve";
 import { alignRingHeadToShank } from "../../utils/ringAssembly";
-import { captureRingPreviews, type RingPreviewImage } from "../../utils/ringPreview";
+import { captureRingPreviews, type RingPreviewImage, type RingDetailPreviewRequest } from "../../utils/ringPreview";
+import { getRingCameraPose, type RingCameraView } from "../../utils/ringCameraViews";
+import { HandPreview } from "../../utils/handPreview";
+import { MultiRingEngraving as RingEngraving } from "../../utils/ringEngraving";
+import type { EngravingPosition, EngravingStatus, RingEngravingConfig } from "../../config/engraving";
+import { DEFAULT_SKIN_TONE } from "../../config/skinTones";
+import { holdViewerFrame, clearViewerFrames } from "../../utils/viewerFrame";
 
 // Types
 import type { PartLoadType, PartMeshCaches } from "../../types/ring.types";
@@ -133,13 +144,20 @@ export interface RingViewerProps {
   bandFile1?: string;
   bandFile2?: string;
   matchingBandCount?: number;
-  cameraView?: "front" | "top" | "side" | string;
+  cameraView?: RingCameraView | string;
   cameraViewRevision?: number;
   previewKey?: string;
   onPreviewImagesChange?: (key: string, images: RingPreviewImage[]) => void;
+  detailPreviewRequest?: RingDetailPreviewRequest;
+  onDetailPreviewChange?: (request: RingDetailPreviewRequest, image: RingPreviewImage | null) => void;
   isAutoRotating?: boolean;
+  handSkinTone?: number;
   onLoadingChange?: (loading: boolean) => void;
   ringTransform?: RingTransform;
+  engraving?: RingEngravingConfig[];
+  engravingFocusPosition?: EngravingPosition;
+  engravingPhotoPosition?: EngravingPosition;
+  onEngravingStatusChange?: (status: EngravingStatus) => void;
 }
 
 const DEFAULT_HEAD_FILE = assetUrl(
@@ -149,19 +167,9 @@ const DEFAULT_METAL_HEX = "#C2C2C3";
 
 export const CAMERA_PRESETS = {
   hero: {
-    position: { x: 7.5, y: 3.8, z: -7.5 },
+    position: { x: 6.75, y: 3.43, z: -6.75 },
     target: { x: 0, y: 0.1, z: 0 },
     autoRotate: true,
-  },
-  top: {
-    position: { x: 0.001, y: 12.5, z: 0.05 },
-    target: { x: 0, y: 0.35, z: 0 },
-    autoRotate: false,
-  },
-  side: {
-    position: { x: 12.5, y: 0.4, z: 0.001 },
-    target: { x: 0, y: 0.1, z: 0 },
-    autoRotate: false,
   },
 };
 
@@ -202,17 +210,37 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const loadIdRef = useRef(0);
   const previewCaptureRef = useRef<AbortController | null>(null);
   const previewCacheRef = useRef(new Map<string, RingPreviewImage[]>());
+  const detailPreviewCacheRef = useRef(new Map<string, RingPreviewImage>());
+  const initializeRingCameraRef = useRef<(() => Promise<void>) | null>(null);
+  const initialCameraReadyRef = useRef(false);
+  const firstCameraPropHandledRef = useRef(false);
   const previewRequestRef = useRef({ key: props.previewKey, callback: props.onPreviewImagesChange });
   previewRequestRef.current = { key: props.previewKey, callback: props.onPreviewImagesChange };
   const partTransitionRef = useRef<RingDissolveTransition | null>(null);
   const [partTransitionPhase, setPartTransitionPhase] = useState("idle");
   const activeCameraRef = useRef<any>(null);
+  const cameraTweenRef = useRef<gsap.core.Tween | null>(null);
+  const pendingCameraViewRef = useRef<string | null>(null);
+  const handPreviewRef = useRef<HandPreview | null>(null);
+  const engravingRef = useRef<RingEngraving | null>(null);
+  const engravingRequestRef = useRef({ config: props.engraving ?? [], callback: props.onEngravingStatusChange });
+  engravingRequestRef.current = { config: props.engraving ?? [], callback: props.onEngravingStatusChange };
+  const engravingFocusPositionRef = useRef(props.engravingFocusPosition);
+  engravingFocusPositionRef.current = props.engravingFocusPosition;
+  const engravingPhotoPositionRef = useRef(props.engravingPhotoPosition);
+  engravingPhotoPositionRef.current = props.engravingPhotoPosition;
+  const selectedCameraViewRef = useRef(props.cameraView);
+  selectedCameraViewRef.current = props.cameraView;
+  const cameraRequestRef = useRef(0);
+  const [handPreviewStatus, setHandPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const handSkinToneRef = useRef(props.handSkinTone ?? DEFAULT_SKIN_TONE);
+  handSkinToneRef.current = props.handSkinTone ?? DEFAULT_SKIN_TONE;
   const cameraControlsRef = useRef<any>(null);
   const controlsLockDepthRef = useRef(0);
   const viewerInputLockedRef = useRef(false);
   const initialRevealDoneRef = useRef(false);
-  const isAutoRotatingRef = useRef(props.isAutoRotating);
-  isAutoRotatingRef.current = props.isAutoRotating;
+  const isAutoRotatingRef = useRef(false);
+  isAutoRotatingRef.current = props.isAutoRotating === true && (!props.cameraView || props.cameraView === "front" || props.cameraView === "hero");
   const loadModelsRef = useRef<any>(null);
   const [isViewerRevealed, setIsViewerRevealed] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -399,14 +427,11 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       cameraControlsRef.current;
     if (controls) {
       try {
-        controls.autoRotate = enabled && isAutoRotatingRef.current !== false;
-        controls.enabled = enabled;
+        controls.autoRotate = enabled && !cameraTweenRef.current && isAutoRotatingRef.current !== false;
+        controls.enabled = enabled && !cameraTweenRef.current;
         if ("enableRotate" in controls) controls.enableRotate = enabled;
         if ("enablePan" in controls) controls.enablePan = enabled;
         if ("enableZoom" in controls) controls.enableZoom = enabled;
-        if (enabled && isAutoRotatingRef.current !== false) {
-          controls.autoRotate = true;
-        }
       } catch {
         /* ignore */
       }
@@ -449,6 +474,43 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     );
   }, []);
 
+  const syncEngraving = useCallback(() => {
+    const engraving = engravingRef.current ??= new RingEngraving();
+    const revision = engraving.revision;
+    const status = engraving.apply(currentShankRef.current, engravingRequestRef.current.config);
+    if (engraving.active && engraving.revision !== revision && selectedCameraViewRef.current === "engraving") pendingCameraViewRef.current = "engraving";
+    if (status === "unavailable" && pendingCameraViewRef.current === "engraving") pendingCameraViewRef.current = "front";
+    engravingRequestRef.current.callback?.(status);
+    viewerRef.current?.setDirty?.();
+    return engraving.active ? engraving : undefined;
+  }, []);
+
+  // Both model changes and inscription changes share this capture path.
+  // The caller owns the controls lock until the live transforms are restored.
+  const refreshGallery = useCallback(async (viewer: any, request = previewRequestRef.current) => {
+    const engraving = syncEngraving();
+    if (!request.key || !request.callback || !initialRevealDoneRef.current) return;
+    const key = request.key;
+    const cached = previewCacheRef.current.get(key);
+    if (cached) { request.callback(key, cached); return; }
+    const controller = new AbortController();
+    previewCaptureRef.current = controller;
+    handPreviewRef.current?.suspend();
+    try {
+      const position = engravingPhotoPositionRef.current;
+      const images = await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal, { engraving: engraving && { position, cameraPose: camera => engraving.cameraPose(camera, position) } });
+      if (!controller.signal.aborted && viewer === viewerRef.current && key === previewRequestRef.current.key && images.length === 3) {
+        if (previewCacheRef.current.size >= 6) previewCacheRef.current.delete(previewCacheRef.current.keys().next().value!);
+        previewCacheRef.current.set(key, images);
+        request.callback(key, images);
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) console.warn("Ring gallery capture failed", error);
+    } finally {
+      if (previewCaptureRef.current === controller) previewCaptureRef.current = null;
+    }
+  }, [syncEngraving]);
+
   const loadModels = useCallback(
     async (
       viewer: any,
@@ -478,6 +540,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     ) => {
       const loadId = (loadIdRef.current += 1);
       previewCaptureRef.current?.abort();
+      handPreviewRef.current?.resume(currentShankRef.current);
       const previewRequest = previewRequestRef.current;
       // A new selection restores the visible part before preparing its successor.
       partTransitionRef.current?.cancel();
@@ -1197,6 +1260,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
           }
 
           alignRingHeadToShank(currentHeadRef.current, currentShankRef.current);
+          syncEngraving();
           syncShankOnlyContactShadowCasting();
           viewer.renderer?.refreshPipeline?.();
           viewer.setDirty?.();
@@ -1392,6 +1456,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             });
             await runFullRingDiamondRefresh({ restoreHeadShankVisibility: false });
             applyFinalRingVisibility();
+            await initializeRingCameraRef.current?.();
             getRingRoots().forEach(prepareRingDissolve);
             revealViewerAfterFirstLoad();
             viewer.renderer?.refreshPipeline?.();
@@ -1454,30 +1519,18 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
           initialRevealDoneRef.current && previewRequest.key && previewRequest.callback &&
           currentHeadFileRef.current === headData?.file && currentShankFileRef.current === shankData?.file
         ) {
-          const key = previewRequest.key;
-          const cached = previewCacheRef.current.get(key);
-          if (cached) previewRequest.callback(key, cached);
-          else {
-            const controller = new AbortController();
-            previewCaptureRef.current = controller;
-            try {
-              const images = await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal);
-              if (loadId === loadIdRef.current && !controller.signal.aborted && images.length === 3) {
-                if (previewCacheRef.current.size >= 6) previewCacheRef.current.delete(previewCacheRef.current.keys().next().value!);
-                previewCacheRef.current.set(key, images);
-                previewRequest.callback(key, images);
-              }
-            } catch (error) {
-              if (!controller.signal.aborted) console.warn("Ring gallery capture failed", error);
-            } finally {
-              if (previewCaptureRef.current === controller) previewCaptureRef.current = null;
-            }
-          }
+          await refreshGallery(viewer, previewRequest);
         }
         unlockViewerControls();
+        if (!viewerInputLockedRef.current && loadId === loadIdRef.current) handPreviewRef.current?.resume(currentShankRef.current);
+        if (!viewerInputLockedRef.current && pendingCameraViewRef.current) {
+          const pendingView = pendingCameraViewRef.current;
+          pendingCameraViewRef.current = null;
+          (window as any).goToCameraView?.(pendingView);
+        }
         const ctrl =
           cameraControlsRef.current ?? viewer.scene?.activeCamera?.controls;
-        if (ctrl && !viewerInputLockedRef.current && isAutoRotatingRef.current !== false) {
+        if (ctrl && !viewerInputLockedRef.current && !cameraTweenRef.current && isAutoRotatingRef.current !== false) {
           ctrl.autoRotate = true;
         }
         ensureSSRDisabled(viewer);
@@ -1491,6 +1544,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       syncShankOnlyContactShadowCasting,
       lockViewerControls,
       unlockViewerControls,
+      syncEngraving,
+      refreshGallery,
     ],
   );
 
@@ -1690,6 +1745,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
       await getOrAddPlugin(GBufferPlugin);
       ensureSSRDisabled(viewerAny);
+      configureRingOcclusion(viewerAny);
 
       const progressivePlugin: any =
         viewerAny.getPlugin(ProgressivePlugin) ||
@@ -1739,95 +1795,208 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         }
       }
 
-      const applyPresetCameraView = (name: string) => {
+      let alignedOrbitModule: typeof import("three/examples/jsm/controls/OrbitControls.js") | undefined;
+      const applyPresetCameraView = async (name: string, initial = false) => {
+        const requestId = ++cameraRequestRef.current;
         const activeCamera = viewerRef.current?.scene?.activeCamera as any;
-        const controls = activeCamera?.controls as any;
         const viewer = viewerRef.current;
-        if (!activeCamera?.position || !controls) return false;
+        if (!activeCamera?.position) return false;
+        // Gallery capture temporarily poses the real ring for each photograph.
+        // Frame a requested view only after the live transforms are restored.
+        if (!initial && (previewCaptureRef.current || viewerInputLockedRef.current)) {
+          pendingCameraViewRef.current = name;
+          return false;
+        }
+        pendingCameraViewRef.current = null;
+        if (name === "engraving" && !engravingRef.current?.matches(engravingRequestRef.current.config)) {
+          if (engravingRequestRef.current.config.length) pendingCameraViewRef.current = name;
+          return false;
+        }
+        const revealFrame = initial ? (_immediate?: boolean) => {} : await holdViewerFrame(viewer, canvasRef.current!);
+        try {
+          if (requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
+          if (!initial && (previewCaptureRef.current || viewerInputLockedRef.current)) { pendingCameraViewRef.current = name; return false; }
+          cameraTweenRef.current?.kill();
+          cameraTweenRef.current = null;
+          const view = name === "side" ? "head" : name === "hero" ? "front" : name;
+          const ground = contactShadowGroundRef.current;
+          if (ground) {
+            ground.visible = view !== "engraving";
+            if (ground.mesh?.modelObject) ground.mesh.modelObject.visible = view !== "engraving";
+          }
+          const mobile = window.innerWidth <= 768;
+          const baseMinDistance = mobile ? CAMERA_MIN_DISTANCE_MOBILE : CAMERA_MIN_DISTANCE_DESKTOP;
+          const baseMaxDistance = mobile ? CAMERA_MAX_DISTANCE_MOBILE : CAMERA_MAX_DISTANCE_DESKTOP;
+          const hero = CAMERA_PRESETS.hero;
+          let handPose;
+          if (view === "hand") {
+            const hand = handPreviewRef.current ??= new HandPreview(viewer, manager);
+            setHandPreviewStatus("loading");
+            await hand.load();
+            if (requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
+            if (previewCaptureRef.current || viewerInputLockedRef.current) { pendingCameraViewRef.current = name; return false; }
+            hand.show(currentShankRef.current);
+            hand.setSkinTone(handSkinToneRef.current);
+            handPose = hand.cameraPose(activeCamera);
+            handPose.minDistance = Math.max(0.3, handPose.position.distanceTo(handPose.target) * 0.08);
+            setHandPreviewStatus("ready");
+          } else {
+            handPreviewRef.current?.hide();
+            setHandPreviewStatus("idle");
+          }
+          const pose = handPose ?? (view === "engraving" ? engravingRef.current?.cameraPose(activeCamera, engravingFocusPositionRef.current) : getRingCameraPose(view, currentHeadRef.current, currentShankRef.current, activeCamera)) ?? {
+            position: new Vector3(hero.position.x, hero.position.y, hero.position.z),
+            target: new Vector3(hero.target.x, hero.target.y, hero.target.z),
+            up: new Vector3(0, 1, 0), minDistance: baseMinDistance,
+          };
+          // Each preset owns its orbit frame. OrbitControls caches the up-axis
+          // at construction, so reusing it also reuses old drag/pan momentum.
+          const controlsMode = `ring-preset-${view}`;
+          {
+            alignedOrbitModule ??= await import("three/examples/jsm/controls/OrbitControls.js");
+            if (requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
+            const desiredUp = pose.up.clone();
+            const Orbit = alignedOrbitModule.OrbitControls;
+            activeCamera.setControlsCtor(controlsMode, (object: any, element: HTMLElement) => {
+              object.up.copy(desiredUp);
+              const orbit = new Orbit(object, element);
+              const update = orbit.update.bind(orbit) as (deltaTime?: number) => boolean;
+              let lastUpdate = performance.now();
+              orbit.update = () => {
+                const now = performance.now();
+                const delta = Math.min(0.05, Math.max(0, (now - lastUpdate) / 1000));
+                lastUpdate = now;
+                object.up.copy(desiredUp);
+                return orbit.enabled ? update(delta) : false;
+              };
+              return orbit;
+            }, true);
+          }
+          const cameraObject = activeCamera.cameraObject ?? activeCamera;
+          const startPosition = activeCamera.position.clone();
+          const startTarget = (activeCamera.controls?.target ?? activeCamera.target).clone();
+          const startUp = cameraObject.up.clone();
+          if (activeCamera.controls) {
+            activeCamera.controls.autoRotate = false;
+            activeCamera.controls.enabled = false;
+          }
+          activeCamera.target.copy(startTarget);
+          // Remove the old controller while tweening; even a disabled orbit
+          // controller can apply its cached deltas when WebGI calls update().
+          activeCamera.setCameraOptions({ controlsMode: "", controlsEnabled: true }, false);
+          cameraControlsRef.current = null;
 
-        let preset = CAMERA_PRESETS.hero;
-        if (name === "top") preset = CAMERA_PRESETS.top;
-        else if (name === "side") preset = CAMERA_PRESETS.side;
-        else preset = CAMERA_PRESETS.hero;
-
-        // Pause autoRotate during camera transition
-        controls.autoRotate = false;
-
-        const currentPos = {
-          x: activeCamera.position.x,
-          y: activeCamera.position.y,
-          z: activeCamera.position.z,
-        };
-        const currentTarget = {
-          x: controls.target.x,
-          y: controls.target.y,
-          z: controls.target.z,
-        };
-
-        gsap.killTweensOf(currentPos);
-        gsap.killTweensOf(currentTarget);
-
-        gsap.to(currentPos, {
-          x: preset.position.x,
-          y: preset.position.y,
-          z: preset.position.z,
-          duration: 0.85,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            activeCamera.position.set(currentPos.x, currentPos.y, currentPos.z);
-            if (typeof activeCamera.positionUpdated === "function") {
-              activeCamera.positionUpdated();
-            }
-            controls.update?.();
+          const setCameraPose = (position: Vector3, target: Vector3, up: Vector3) => {
+            cameraObject.up.copy(up);
+            activeCamera.position.copy(position);
+            activeCamera.target.copy(target);
+            activeCamera.positionUpdated?.(false);
+            activeCamera.targetUpdated?.(false);
+            cameraObject.lookAt(target);
+            cameraObject.updateMatrixWorld();
+            activeCamera.setDirty?.();
             viewer?.setDirty?.();
-          },
-          onComplete: () => {
-            activeCamera.position.set(preset.position.x, preset.position.y, preset.position.z);
-            if (typeof activeCamera.positionUpdated === "function") {
-              activeCamera.positionUpdated();
-            }
+          };
+          const rebuildControls = (position: Vector3, target: Vector3, minDistance: number) => {
+            // Set the canonical up-axis BEFORE constructing the fresh controls.
+            setCameraPose(position, target, pose.up);
+            activeCamera.setCameraOptions({ controlsMode, controlsEnabled: true }, false);
+            const controls = activeCamera.controls;
+            cameraControlsRef.current = controls;
+            controls.enabled = false;
+            controls.autoRotate = false;
+            controls.enableDamping = false;
+            controls.enableZoom = true;
+            controls.enableRotate = true;
+            controls.enablePan = true;
+            controls.screenSpacePanning = true;
+            controls.rotateSpeed = view === "hand" ? 0.55 : 0.8;
+            controls.zoomSpeed = view === "hand" ? 2.6 : mobile ? 1.4 : 2.0;
+            controls.zoomToCursor = view === "hand";
+            controls.autoRotateSpeed = CAMERA_AUTO_ROTATE_SPEED;
+            controls.dampingFactor = 0.07;
+            controls.smoothZoom = true;
+            controls.smoothTime = 0.08;
+            controls.minPolarAngle = view === "hand" ? 0.08 : 0.001;
+            controls.maxPolarAngle = Math.PI - controls.minPolarAngle;
+            controls.minDistance = minDistance;
+            controls.maxDistance = Math.max(baseMaxDistance, position.distanceTo(target) * (view === "hand" ? 3 : 1));
+            // WebGI resets camera.up when enabling controls. Restore the
+            // preset frame and target before the first synchronization update.
+            setCameraPose(position, target, pose.up);
             controls.update?.();
-            viewer?.setDirty?.();
-            if (preset.autoRotate && isAutoRotatingRef.current !== false && !viewerInputLockedRef.current) {
-              controls.autoRotate = true;
-            }
-          },
-        });
+            controls.saveState?.();
+            controls.enableDamping = true;
+            controls.enabled = !viewerInputLockedRef.current;
+            controls.autoRotate = isAutoRotatingRef.current && !viewerInputLockedRef.current;
+            activeCamera.setDirty?.();
+          };
+          if (initial) {
+            rebuildControls(pose.position, pose.target, pose.minDistance);
+            // Gallery capture preserves the current canvas pixels. Make sure
+            // those pixels already use the final fit before showing the ring.
+            await Promise.race([viewer.doOnce("postRender"), new Promise(resolve => setTimeout(resolve, 250))]);
+            if (!isMounted || requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
+            initialCameraReadyRef.current = true;
+            return true;
+          }
+          const progress = { value: 0 };
+          const position = startPosition.clone();
+          const target = startTarget.clone();
+          const up = startUp.clone();
+          const startRotation = cameraObject.quaternion.clone();
+          const endRotation = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(pose.position, pose.target, pose.up));
+          const rotation = startRotation.clone();
+          const startDistance = Math.max(0.001, startPosition.distanceTo(startTarget));
+          const endDistance = Math.max(0.001, pose.position.distanceTo(pose.target));
+          const updateCamera = () => {
+            target.lerpVectors(startTarget, pose.target, progress.value);
+            // Travel around the target while zooming, rather than cutting
+            // through the ring/hand when two views face opposite directions.
+            rotation.slerpQuaternions(startRotation, endRotation, progress.value);
+            const distance = startDistance * (endDistance / startDistance) ** progress.value;
+            position.set(0, 0, 1).applyQuaternion(rotation).multiplyScalar(distance).add(target);
+            up.set(0, 1, 0).applyQuaternion(rotation);
+            setCameraPose(position, target, up);
+          };
+          updateCamera();
+          // Compile/render the newly shown hand behind the frame guard first.
+          // Starting the tween before that work finishes can skip its movement.
+          await Promise.race([viewer.doOnce("postRender"), new Promise(resolve => setTimeout(resolve, 250))]);
+          if (!isMounted || requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
+          if (previewCaptureRef.current || viewerInputLockedRef.current) { pendingCameraViewRef.current = name; return false; }
+          revealFrame(true);
+          cameraTweenRef.current = gsap.to(progress, {
+            value: 1, duration: 0.85, ease: "power2.inOut", onUpdate: updateCamera,
+            onComplete: () => {
+              cameraTweenRef.current = null;
+              rebuildControls(pose.position, pose.target, pose.minDistance);
+              revealFrame();
+            },
+            onInterrupt: () => {
+              cameraTweenRef.current = null;
+              if (isMounted && viewerRef.current === viewer && requestId === cameraRequestRef.current) {
+                rebuildControls(activeCamera.position.clone(), activeCamera.target.clone(), Math.min(pose.minDistance, activeCamera.position.distanceTo(activeCamera.target)));
+              }
+              revealFrame();
+            },
+          });
 
-        gsap.to(currentTarget, {
-          x: preset.target.x,
-          y: preset.target.y,
-          z: preset.target.z,
-          duration: 0.85,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            controls.target.set(currentTarget.x, currentTarget.y, currentTarget.z);
-            if (activeCamera.target?.set) {
-              activeCamera.target.set(currentTarget.x, currentTarget.y, currentTarget.z);
-            }
-            if (typeof activeCamera.targetUpdated === "function") {
-              activeCamera.targetUpdated();
-            }
-          },
-          onComplete: () => {
-            controls.target.set(preset.target.x, preset.target.y, preset.target.z);
-            if (activeCamera.target?.set) {
-              activeCamera.target.set(preset.target.x, preset.target.y, preset.target.z);
-            }
-            if (typeof activeCamera.targetUpdated === "function") {
-              activeCamera.targetUpdated();
-            }
-          },
-        });
-
-        return true;
+          return true;
+        } finally { revealFrame(); }
       };
+
+      initializeRingCameraRef.current = async () => { await applyPresetCameraView("front", true); };
 
       (window as any).goToCameraView = async (name: string) => {
         if (!name) return;
-        applyPresetCameraView(name);
+        try { await applyPresetCameraView(name); }
+        catch (error) {
+          console.warn("Viewer view could not be opened", error);
+          if (isMounted && viewerRef.current === viewer && name === "hand") setHandPreviewStatus("error");
+        }
       };
-      cleanupStack.push(() => { delete (window as any).goToCameraView; });
+      cleanupStack.push(() => { cameraRequestRef.current++; clearViewerFrames(canvasRef.current); handPreviewRef.current?.dispose(); handPreviewRef.current = null; cameraTweenRef.current?.kill(); cameraTweenRef.current = null; pendingCameraViewRef.current = null; delete (window as any).goToCameraView; });
 
       object3dRef.current = Object3D;
 
@@ -1836,6 +2005,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       viewer.setDirty?.();
 
       const cameraView = viewer.scene.activeCamera;
+      cameraView.userData.minNearPlane = 0.01;
       const controls = cameraView?.controls as any;
       activeCameraRef.current = cameraView ?? null;
       cameraControlsRef.current = controls ?? null;
@@ -1858,29 +2028,6 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         const minDist = isMobile ? CAMERA_MIN_DISTANCE_MOBILE : CAMERA_MIN_DISTANCE_DESKTOP;
         const maxDist = isMobile ? CAMERA_MAX_DISTANCE_MOBILE : CAMERA_MAX_DISTANCE_DESKTOP;
 
-        const clampDistance = () => {
-          try {
-            const tgt = (controls && (controls.target || controls._target)) || {
-              x: 0,
-              y: 0,
-              z: 0,
-            };
-            const dx = cameraView.position.x - tgt.x;
-            const dy = cameraView.position.y - tgt.y;
-            const dz = cameraView.position.z - tgt.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.0001;
-            if (dist < minDist || dist > maxDist) {
-              const scale = dist < minDist ? minDist / dist : maxDist / dist;
-              cameraView.position.set(
-                tgt.x + dx * scale,
-                tgt.y + dy * scale,
-                tgt.z + dz * scale,
-              );
-              viewerRef.current?.setDirty?.();
-            }
-          } catch (e) {}
-        };
-
         try { controls.enableZoom = true; } catch (e) {}
         try { controls.minDistance = minDist; } catch (e) {}
         try { controls.maxDistance = maxDist; } catch (e) {}
@@ -1888,22 +2035,21 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         try { controls.dampingFactor = 0.07; } catch (e) {}
         try { controls.smoothZoom = true; } catch (e) {}
         try { controls.smoothTime = 0.08; } catch (e) {}
-        try { controls.zoomSpeed = isMobile ? 0.55 : 0.8; } catch (e) {}
+        try { controls.zoomSpeed = isMobile ? 1.4 : 2.0; } catch (e) {}
         try {
           controls.autoRotate = isAutoRotatingRef.current !== false;
-          controls.autoRotateSpeed = 1.2;
+          controls.autoRotateSpeed = CAMERA_AUTO_ROTATE_SPEED;
         } catch (e) {}
-
-        try { controls.addEventListener?.("change", clampDistance); } catch (e) {}
-        cleanupStack.push(() => {
-          try { controls.removeEventListener?.("change", clampDistance); } catch (e) {}
-        });
 
         // Continuous smooth auto-rotation animation frame tick
         let autoRotateFrameId: number;
         const tickAutoRotate = () => {
-          if (controls && controls.autoRotate) {
-            controls.update?.();
+          const currentControls: any = cameraView?.controls;
+          const rotate = isAutoRotatingRef.current && !viewerInputLockedRef.current && !cameraTweenRef.current;
+          if (currentControls) currentControls.autoRotate = rotate;
+          if (currentControls && rotate) {
+            // WebGI updates controls once in postFrame. A second update here
+            // doubles rotation and makes its speed depend on rendering load.
             viewer.setDirty?.();
           }
           autoRotateFrameId = requestAnimationFrame(tickAutoRotate);
@@ -1918,12 +2064,19 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       const EPS = 0.01;
       const canvasEl = canvasRef.current;
       if (canvasEl) {
+        const cancelCameraTransition = () => {
+          if (!cameraTweenRef.current) return;
+          cameraTweenRef.current.kill();
+          cameraTweenRef.current = null;
+          viewer.setDirty?.();
+        };
         const wheelHandler = (ev: WheelEvent) => {
           if (viewerInputLockedRef.current) {
             ev.preventDefault();
             ev.stopImmediatePropagation();
             return;
           }
+          cancelCameraTransition();
           try {
             const ctrl: any = cameraView?.controls;
             const tgt = (ctrl && (ctrl.target || ctrl._target)) || {
@@ -1935,12 +2088,12 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             const dy = cameraView.position.y - tgt.y;
             const dz = cameraView.position.z - tgt.z;
             const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (ev.deltaY < 0 && dist <= CONTROL_MIN_DISTANCE + EPS) {
+            if (ev.deltaY < 0 && dist <= (ctrl?.minDistance ?? CONTROL_MIN_DISTANCE) + EPS) {
               ev.preventDefault();
               ev.stopImmediatePropagation();
               return;
             }
-            if (ev.deltaY > 0 && dist >= CONTROL_MAX_DISTANCE - EPS) {
+            if (ev.deltaY > 0 && dist >= (ctrl?.maxDistance ?? CONTROL_MAX_DISTANCE) - EPS) {
               ev.preventDefault();
               ev.stopImmediatePropagation();
               return;
@@ -1962,7 +2115,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             e.stopImmediatePropagation();
             return;
           }
-          if (e.button === 2) {
+          cancelCameraTransition();
+          if (e.button === 2 && !handPreviewRef.current?.active) {
             rightBtnDown = true;
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -2132,6 +2286,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     return () => {
       isMounted = false;
       previewCaptureRef.current?.abort();
+      engravingRef.current?.dispose();
+      engravingRef.current = null;
       loadIdRef.current += 1;
       partTransitionRef.current?.cancel();
       partTransitionRef.current = null;
@@ -2143,6 +2299,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         viewerInstance = null;
       }
       viewerRef.current = null;
+      initializeRingCameraRef.current = null;
+      initialCameraReadyRef.current = false;
+      firstCameraPropHandledRef.current = false;
       activeCameraRef.current = null;
       cameraControlsRef.current = null;
       controlsLockDepthRef.current = 0;
@@ -2236,23 +2395,115 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     props.bandFile1,
     props.bandFile2,
     props.matchingBandCount,
-    props.previewKey,
   ]);
+
+  // Engraving updates only metal shaders and photographs; diamonds stay baked.
+  useEffect(() => {
+    if (!isViewerReady) return;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const controller = new AbortController();
+    const update = async () => {
+      while (!controller.signal.aborted && viewerRef.current === viewer && (viewerInputLockedRef.current || previewCaptureRef.current || cameraTweenRef.current)) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      if (controller.signal.aborted || viewerRef.current !== viewer) return;
+      lockViewerControls();
+      props.onLoadingChange?.(true);
+      try { await refreshGallery(viewer); }
+      finally {
+        if (viewerRef.current !== viewer) return;
+        unlockViewerControls();
+        props.onLoadingChange?.(false);
+        if (!viewerInputLockedRef.current) handPreviewRef.current?.resume(currentShankRef.current);
+        if (!viewerInputLockedRef.current && pendingCameraViewRef.current) {
+          const view = pendingCameraViewRef.current;
+          pendingCameraViewRef.current = null;
+          (window as any).goToCameraView?.(view);
+        }
+      }
+    };
+    void update();
+    return () => { controller.abort(); previewCaptureRef.current?.abort(); };
+  }, [isViewerReady, props.previewKey, refreshGallery, lockViewerControls, unlockViewerControls]);
+
+  // Generate one high-resolution photo only when its lightbox is opened.
+  // Ordinary gallery updates retain their inexpensive 1200px render path.
+  useEffect(() => {
+    const request = props.detailPreviewRequest;
+    if (!isViewerReady || !request || request.key !== props.previewKey) return;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const controller = new AbortController();
+    const cacheKey = `${request.key}:${request.viewId}:${request.resolution}:${request.engravingPosition ?? ""}`;
+    const cached = detailPreviewCacheRef.current.get(cacheKey);
+    if (cached) {
+      props.onDetailPreviewChange?.(request, cached);
+      return;
+    }
+    const renderDetail = async () => {
+      while (!controller.signal.aborted && viewerRef.current === viewer && (viewerInputLockedRef.current || previewCaptureRef.current || cameraTweenRef.current)) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      if (controller.signal.aborted || viewerRef.current !== viewer) return;
+      lockViewerControls();
+      previewCaptureRef.current = controller;
+      handPreviewRef.current?.suspend();
+      try {
+        const roots = [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible);
+        const engraving = engravingRef.current;
+        const [image] = await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition) } : undefined });
+        if (!controller.signal.aborted && viewerRef.current === viewer) {
+          if (image) {
+            if (detailPreviewCacheRef.current.size >= 3) detailPreviewCacheRef.current.delete(detailPreviewCacheRef.current.keys().next().value!);
+            detailPreviewCacheRef.current.set(cacheKey, image);
+          }
+          props.onDetailPreviewChange?.(request, image ?? null);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted && viewerRef.current === viewer) {
+          console.warn("Detailed ring photo could not be generated", error);
+          props.onDetailPreviewChange?.(request, null);
+        }
+      } finally {
+        if (previewCaptureRef.current === controller) previewCaptureRef.current = null;
+        if (viewerRef.current === viewer) {
+          unlockViewerControls();
+          if (!viewerInputLockedRef.current) handPreviewRef.current?.resume(currentShankRef.current);
+          if (!viewerInputLockedRef.current && pendingCameraViewRef.current) {
+            const view = pendingCameraViewRef.current;
+            pendingCameraViewRef.current = null;
+            (window as any).goToCameraView?.(view);
+          }
+        }
+      }
+    };
+    void renderDetail();
+    return () => controller.abort();
+  }, [isViewerReady, props.previewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
 
   // ── Camera view prop handler ───────────────────────────────────────────────
   useEffect(() => {
     if (!isViewerReady || !props.cameraView) return;
+    if (!firstCameraPropHandledRef.current) {
+      firstCameraPropHandledRef.current = true;
+      if (initialCameraReadyRef.current && (props.cameraView === "front" || props.cameraView === "hero")) return;
+    }
     (window as any).goToCameraView?.(props.cameraView);
-  }, [isViewerReady, props.cameraView, props.cameraViewRevision]);
+  }, [isViewerReady, props.cameraView, props.cameraViewRevision, props.cameraView === "engraving" ? props.engravingFocusPosition : undefined]);
 
   // ── Auto rotate prop handler ───────────────────────────────────────────────
+  useEffect(() => {
+    handPreviewRef.current?.setSkinTone(props.handSkinTone ?? DEFAULT_SKIN_TONE);
+  }, [props.handSkinTone]);
+
   useEffect(() => {
     const controls =
       cameraControlsRef.current ??
       activeCameraRef.current?.controls ??
       viewerRef.current?.scene?.activeCamera?.controls;
     if (controls) {
-      controls.autoRotate = props.isAutoRotating === true;
+      controls.autoRotate = isAutoRotatingRef.current && !viewerInputLockedRef.current && !cameraTweenRef.current;
       viewerRef.current?.setDirty?.();
     }
   }, [props.isAutoRotating]);
@@ -2383,7 +2634,6 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       {!isViewerRevealed && (
         <div
           className="viewer-initial-loader"
-          style={{ backgroundColor: BACKGROUND_COLOR }}
           aria-label="Loading"
         >
           <div className="dot-loader">
@@ -2406,6 +2656,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
           visibility: isViewerRevealed ? "visible" : "hidden",
         }}
       />
+
+      {handPreviewStatus === "loading" && <div className="hand-preview-status" role="status">Loading hand…</div>}
+      {handPreviewStatus === "error" && <div className="hand-preview-status" role="status">Hand preview unavailable. <button type="button" onClick={() => (window as any).goToCameraView?.("hand")}>Retry</button></div>}
 
       {showInstructions && (
         <div

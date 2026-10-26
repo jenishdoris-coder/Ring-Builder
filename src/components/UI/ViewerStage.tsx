@@ -1,15 +1,24 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CameraControls } from "./CameraControls";
+import type { RingCameraView } from "../../utils/ringCameraViews";
+import { HandToneControl } from "./HandToneControl";
+import { EngravingPositionSwitch } from "./EngravingPositionSwitch";
+import type { EngravingPosition } from "../../config/engraving";
 
 interface ViewerStageProps {
   children: ReactNode;
   currentView: string;
-  isAutoRotating: boolean;
-  onSelectView: (view: "front" | "top" | "side") => void;
-  onToggleAutoRotate: () => void;
+  onSelectView: (view: RingCameraView) => void;
+  onHoverChange: (hovered: boolean) => void;
+  handSkinTone: number;
+  onChangeHandSkinTone: (value: number) => void;
+  hasEngraving: boolean;
+  engravingPositions: EngravingPosition[];
+  engravingPosition: EngravingPosition;
+  onSelectEngraving: (position: EngravingPosition) => void;
 }
 
-export const ViewerStage = ({ children, ...controls }: ViewerStageProps) => {
+export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHandSkinTone, engravingPositions, engravingPosition, onSelectEngraving, ...controls }: ViewerStageProps) => {
   const [expanded, setExpanded] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -25,7 +34,7 @@ export const ViewerStage = ({ children, ...controls }: ViewerStageProps) => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); setExpanded(false); }
       if (event.key !== "Tab") return;
-      const buttons = Array.from(stageRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      const buttons = Array.from(stageRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), a[href], [tabindex='0']") ?? []);
       const first = buttons[0], last = buttons[buttons.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -41,11 +50,16 @@ export const ViewerStage = ({ children, ...controls }: ViewerStageProps) => {
 
   return <>
     {expanded && <div className="product-viewer-backdrop" aria-hidden="true" onClick={() => setExpanded(false)} />}
-    <div ref={stageRef} className={`product-viewer-stage ${expanded ? "is-expanded" : ""}`} role={expanded ? "dialog" : undefined} aria-modal={expanded ? true : undefined} aria-label="Interactive 3D ring viewer">
+    <div ref={stageRef} className={`product-viewer-stage ${expanded ? "is-expanded" : ""} ${controls.currentView === "hand" ? "is-hand-preview" : ""}`} role={expanded ? "dialog" : undefined} aria-modal={expanded ? true : undefined} aria-label="Interactive 3D ring viewer"
+      onPointerEnter={event => { if (event.pointerType !== "touch") onHoverChange(true); }} onPointerLeave={() => onHoverChange(false)}>
       {children}
       {expanded && <button ref={closeRef} type="button" className="viewer-close-expanded" aria-label="Close expanded viewer" title="Close expanded viewer" onClick={() => setExpanded(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>}
-      <div className="product-live-caption"><span className="product-live-dot" />Interactive 3D</div>
+      <div className="product-live-caption"><span className="product-live-dot" />{controls.currentView === "hand" ? "On-hand preview" : controls.currentView === "engraving" ? "Engraving detail" : "Interactive 3D"}</div>
       <CameraControls {...controls} isExpanded={expanded} onToggleExpanded={() => setExpanded(value => !value)} />
+      <EngravingPositionSwitch positions={engravingPositions} selected={engravingPosition} onSelect={onSelectEngraving} location="viewer" />
+      <aside className="viewer-right-rail" aria-label={controls.currentView === "hand" ? "Hand appearance" : undefined}>
+        {controls.currentView === "hand" && <HandToneControl value={handSkinTone} onChange={onChangeHandSkinTone} />}
+      </aside>
     </div>
   </>;
 };

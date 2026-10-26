@@ -8,7 +8,7 @@ const clamp = (value: number, minimum: number, maximum: number) => Math.max(mini
 const midpoint = (points: Point[]) => ({ x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 });
 const distance = (points: Point[]) => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
 
-export const ImageLightbox = ({ image, onClose }: { image: RingPreviewImage; onClose: () => void }) => {
+export const ImageLightbox = ({ image, enhancing = false, onClose }: { image: RingPreviewImage; enhancing?: boolean; onClose: () => void }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -112,6 +112,7 @@ export const ImageLightbox = ({ image, onClose }: { image: RingPreviewImage; onC
         <img ref={imageRef} src={image.url} alt={image.label} draggable={false} onLoad={() => update(transformRef.current)} style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }} />
       </div>
       <span className="product-image-zoom-hint">Scroll or pinch to zoom · Drag to explore</span>
+      {enhancing && <span className="product-image-detail-status" role="status">Enhancing detail…</span>}
       <button ref={closeRef} type="button" aria-label="Close enlarged image" title="Close enlarged image" onClick={onClose}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
       <div className="viewer-icon-controls product-image-zoom-controls" role="toolbar" aria-label="Image zoom controls">
         <button type="button" aria-label="Zoom out" title="Zoom out" disabled={transform.scale <= 1} onClick={() => zoomAt(transformRef.current.scale - 0.25)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg></button>

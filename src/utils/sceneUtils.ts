@@ -1,5 +1,5 @@
 import { SSRPlugin } from "webgi";
-import { CONTACT_SHADOW_GROUND } from "../config/viewerConfig";
+import { CONTACT_SHADOW_GROUND, RING_OCCLUSION } from "../config/viewerConfig";
 
 // ---------------------------------------------------------------------------
 // Diamond environment helpers
@@ -99,6 +99,21 @@ export const disableSSRPlugin = async (viewer: any) => {
     }
   }
   ensureSSRDisabled(viewer);
+};
+
+// ---------------------------------------------------------------------------
+// Ambient occlusion
+// ---------------------------------------------------------------------------
+
+/** Keep jewellery contact shading subtle instead of blackening the shoulders. */
+export const configureRingOcclusion = (viewer: any) => {
+  const ssao = viewer.getPluginByType?.("SSAO");
+  const parameters = ssao?.passes?.ssao?.passObject?.parameters;
+  if (parameters) {
+    parameters.intensity = RING_OCCLUSION.intensity;
+    parameters.occlusionWorldRadius = RING_OCCLUSION.radius;
+    ssao.setDirty?.();
+  }
 };
 
 // ---------------------------------------------------------------------------

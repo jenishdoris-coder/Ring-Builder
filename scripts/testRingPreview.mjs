@@ -18,6 +18,9 @@ let preview;
 try { preview = await import(pathToFileURL(tempPath).href); }
 finally { await unlink(tempPath); }
 
+assert.deepEqual(preview.getRingPreviewViews(false).map(view => view.id), ["three-quarter", "top", "profile"]);
+assert.deepEqual(preview.getRingPreviewViews(true).map(view => view.id), ["three-quarter", "top", "engraving"], "only the fourth tile becomes the inscription detail");
+
 // Fit the complete ring for wide, square, and narrow photo tiles.
 const bounds = new Box3(new Vector3(-2, -1, -0.3), new Vector3(2, 4, 0.3));
 for (const aspect of [0.7, 1, 1.5]) {
@@ -118,6 +121,24 @@ assert.equal(new Set(photos.map(item => item.url)).size, 3);
 assert.equal(new Set(complete.poses.map(position => JSON.stringify(position))).size, 3);
 assert.ok(flips.every(args => args[0] === 1 && args[1] === -1), "readback images are correctly oriented");
 complete.checkRestored();
+
+const engraved = makeViewer();
+let inscriptionPoses = 0;
+const engraving = { cameraPose: () => {
+  inscriptionPoses++;
+  return { position: new Vector3(1, 3, 6), target: new Vector3(0, 1, 0), up: new Vector3(0, 1, 0), minDistance: .2 };
+} };
+const engravedPhotos = await preview.captureRingPreviews(engraved.viewer, [root], new AbortController().signal, { engraving });
+assert.deepEqual(engravedPhotos.map(item => item.id), ["three-quarter", "top", "engraving"]);
+assert.equal(inscriptionPoses, 1, "the inscription camera is requested after staging the ring");
+assert.deepEqual(engraved.poses.at(-1), [1, 3, 6], "the fourth tile uses the inscription camera instead of the side angle");
+engraved.checkRestored();
+
+const engravingOnly = makeViewer();
+const detail = await preview.captureRingPreviews(engravingOnly.viewer, [root], new AbortController().signal, { engraving, viewId: "engraving" });
+assert.equal(detail.length, 1);
+assert.equal(engravingOnly.count(), 2, "zooming the engraving regenerates only its selected image");
+engravingOnly.checkRestored();
 
 const cancelled = makeViewer();
 const controller = new AbortController();

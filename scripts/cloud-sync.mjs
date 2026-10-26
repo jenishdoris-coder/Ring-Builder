@@ -8,6 +8,8 @@ import { createR2Client, loadCloudEnv, mongoDatabaseName, required, safeError } 
 loadCloudEnv();
 const root = resolve("public");
 const source = JSON.parse(await readFile("src/config/catalog.json", "utf8"));
+const thumbnails = JSON.parse(await readFile("src/config/modelThumbnails.json", "utf8"));
+const activeThumbnails = new Set(Object.values(thumbnails.images).map(path => path.replace(/^\//, "")));
 const sha256 = data => createHash("sha256").update(data).digest("hex");
 const types = { ".glb": "model/gltf-binary", ".exr": "image/x-exr", ".webp": "image/webp", ".png": "image/png", ".js": "application/javascript", ".wasm": "application/wasm", ".json": "application/json" };
 async function inventory(directory) {
@@ -16,6 +18,9 @@ async function inventory(directory) {
     const absolute = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await inventory(absolute));
     else if (entry.isFile()) {
+      const assetPath = relative(root, absolute).replaceAll("\\", "/");
+      // Keep older local thumbnail versions for reuse without republishing them.
+      if (assetPath.startsWith("images/model-thumbnails/") && !activeThumbnails.has(assetPath)) continue;
       const body = await readFile(absolute);
       files.push({ absolute, path: relative(root, absolute).replaceAll("\\", "/"), bytes: body.length, sha256: sha256(body), contentType: types[extname(entry.name).toLowerCase()] || "application/octet-stream" });
     }
@@ -31,6 +36,11 @@ if (new URL(publicBase).protocol !== "https:") throw new Error("CLOUDFLARE_R2_PU
 const assetBaseUrl = `${publicBase}/${prefix}`;
 const urlFor = path => `${assetBaseUrl}/${path.replace(/^\//, "").split("/").map(encodeURIComponent).join("/")}`;
 const localFiles = new Set(files.map(file => `/${file.path}`));
+if (!localFiles.has("/models/hand/female_hand.glb")) throw new Error("The hand preview asset is missing. Run npm run hand:prepare with the original GLB path.");
+for (const [kind, models] of [["head", source.shapes.flatMap(shape => shape.carats)], ["shank", source.shanks]]) {
+  for (const model of models) if (!thumbnails.images[`${kind}:${model.file}`]) throw new Error(`Generate a static thumbnail before publishing: ${model.file}`);
+}
+for (const path of Object.values(thumbnails.images)) if (!localFiles.has(path)) throw new Error(`Static thumbnail is missing: ${path}. Run npm run thumbnails:generate.`);
 for (const path of [...source.shapes.flatMap(shape => shape.carats.map(carat => carat.file)), ...source.shanks.map(shank => shank.file), "/metal_env.exr", "/diamond_env.exr", ...source.shapes.map(shape => `/images/diamond-shapes/${shape.id}.webp`), "/draco/draco_decoder.wasm", "/draco/draco_wasm_wrapper.js"]) {
   if (!localFiles.has(path)) throw new Error(`Required asset is missing: ${path}`);
 }
@@ -40,7 +50,7 @@ const catalog = {
   shanks: source.shanks.map(shank => ({ ...shank, file: urlFor(shank.file) })),
   metals: source.metals, defaults: source.defaults,
 };
-const stats = { files: files.length, bytes: files.reduce((sum, file) => sum + file.bytes, 0), shapes: source.shapes.length, heads: source.shapes.reduce((sum, shape) => sum + shape.carats.length, 0), shanks: source.shanks.length, metals: source.metals.length };
+const stats = { files: files.length, bytes: files.reduce((sum, file) => sum + file.bytes, 0), shapes: source.shapes.length, heads: source.shapes.reduce((sum, shape) => sum + shape.carats.length, 0), shanks: source.shanks.length, metals: source.metals.length, thumbnails: Object.keys(thumbnails.images).length };
 console.log(JSON.stringify({ stage: "inventory", releaseId, ...stats }));
 await mkdir("artifacts", { recursive: true });
 

@@ -11,8 +11,10 @@ export const CAMERA_MIN_DISTANCE_DESKTOP = 6.5;
 export const CAMERA_MAX_DISTANCE_DESKTOP = 25;
 export const CAMERA_MIN_DISTANCE_MOBILE = 5.5;
 export const CAMERA_MAX_DISTANCE_MOBILE = 20;
+export const CAMERA_AUTO_ROTATE_SPEED = 1.5;
 export const ENABLE_MSAA = false;
 export const BACKGROUND_COLOR = "#fafafa";
+export const RING_OCCLUSION = { intensity: 0.08, radius: 0.2 };
 
 export const CONTACT_SHADOW_GROUND = {
   contactShadows: true,
@@ -26,6 +28,7 @@ export const CONTACT_SHADOW_GROUND = {
   tonemapGround: false,
 };
 
+// Studio source: metal_custom_env_75.exr, published under the stable asset name.
 export const CUSTOM_METAL_ENV_URL = assetUrl("/metal_env.exr");
 export const CUSTOM_DIAMOND_ENV_URL = assetUrl("/diamond_env.exr");
 export const METAL_ENV_ROTATION = 0;

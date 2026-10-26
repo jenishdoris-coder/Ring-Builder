@@ -1,6 +1,6 @@
 # Deploy this Ring Builder on Vercel
 
-The cloud upload is complete: 121 assets (33,602,550 bytes) are stored in Cloudflare R2, and MongoDB contains the catalog for 10 diamond shapes, 70 head models, 34 bands and 3 metals. The current asset release is recorded in `src/config/deployment.json`.
+Cloudflare R2 hosts the models, environments, icons and pre-rendered head/band thumbnails. MongoDB contains the catalog for 10 diamond shapes, 70 head models, 33 bands and 3 metals. The current asset release is recorded in `src/config/deployment.json`; asset counts and upload details are in the local `artifacts/cloud-sync-report.json`.
 
 1. Open the prepared `vercel-upload` folder, or extract `artifacts/ring-builder-vercel-upload.zip` and open the extracted folder.
 2. Open [your GitHub repository](https://github.com/jenishdoris-coder/Ring-Builder). Choose **Add file → Upload files**, or the **uploading an existing file** link on an empty repository.
@@ -33,4 +33,8 @@ Use Vercel's [Environment Variables settings](https://vercel.com/docs/environmen
 
 The current public asset address uses the configured Cloudflare `r2.dev` hostname. Cloudflare recommends a [custom domain for production traffic](https://developers.cloudflare.com/r2/buckets/public-buckets/). When you attach one to this bucket, update `CLOUDFLARE_R2_PUBLIC_URL` in the local `.env`, run `npm run cloud:sync`, regenerate the upload folder and commit the updated files.
 
-For future catalog or model changes, use the original local project: update `src/config/catalog.json` and `public/`, run `npm run cloud:sync`, run the checks, build, and run `npm run prepare:vercel`. Upload the new prepared contents to GitHub. Connected Vercel projects deploy new commits automatically.
+The local project now tracks `main` in the GitHub repository as `origin`. After reviewing changes, commit the source files and push `main` to publish updates. The ignored `.env`, `public/`, dependencies and generated upload folder stay on this computer; public asset URLs and the thumbnail manifest are committed with the source. Connected Vercel projects deploy new commits automatically.
+
+Enable **Web Analytics** and **Speed Insights** in the Vercel project's dashboard, then deploy the updated code. Both React integrations are included and load only in production. Their `/_vercel/` routes are excluded from the SPA fallback. See the official [Web Analytics setup](https://vercel.com/docs/analytics/quickstart) and [Speed Insights setup](https://vercel.com/docs/speed-insights/quickstart). No analytics key or extra environment variable is required.
+
+For future catalog or model changes, use the original local project: update `src/config/catalog.json` and `public/`, run `npm run models:clean` to remove CAD helper geometry (originals are backed up locally), then run `npm run thumbnails:generate`, open the printed local address and click **Generate thumbnails**. Then run `npm run cloud:sync` and commit the updated source and deployment manifest. The generator reuses thumbnails for unchanged model files. `npm run prepare:vercel` remains available for manual GitHub uploads.

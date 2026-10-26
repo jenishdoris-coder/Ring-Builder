@@ -6,7 +6,11 @@ import { ImageLightbox } from "./components/UI/ImageLightbox";
 import { DEFAULT_RING_CONFIG } from "./config/staticModels";
 import { useCatalog } from "./hooks/useCatalog";
 import { FIXED_RING_TRANSFORM } from "./config/ringConfig";
-import { RING_PREVIEW_VERSION, RING_PREVIEW_VIEWS, type RingPreviewImage } from "./utils/ringPreview";
+import { RING_PREVIEW_VERSION, RING_PREVIEW_RESOLUTION, getRingPreviewViews, getRingDetailResolution, type RingPreviewImage, type RingDetailPreviewRequest } from "./utils/ringPreview";
+import { EngravingPositionSwitch } from "./components/UI/EngravingPositionSwitch";
+import { normalizeEngravingText, engravingTextError, type EngravingPosition, type EngravingStatus, type RingEngravingConfig } from "./config/engraving";
+import type { RingCameraView } from "./utils/ringCameraViews";
+import { DEFAULT_SKIN_TONE } from "./config/skinTones";
 import "./styles/configurator.css";
 import "./styles/productConfigurator.css";
 
@@ -18,51 +22,110 @@ export const App = () => {
   const [selectedHeadMetalId, setSelectedHeadMetalId] = useState(DEFAULT_RING_CONFIG.metalId);
   const [selectedShankMetalId, setSelectedShankMetalId] = useState(DEFAULT_RING_CONFIG.metalId);
   const [isModelLoading, setIsModelLoading] = useState(true);
-  const [cameraView, setCameraView] = useState<"front" | "top" | "side">("front");
+  const [cameraView, setCameraView] = useState<RingCameraView>("front");
   const [cameraViewRevision, setCameraViewRevision] = useState(0);
-  const [isAutoRotating, setIsAutoRotating] = useState(true);
+  const [isViewerHovered, setIsViewerHovered] = useState(false);
+  const [handSkinTone, setHandSkinTone] = useState(DEFAULT_SKIN_TONE);
+  const [engravingTexts, setEngravingTexts] = useState<Record<EngravingPosition, string>>({ bottom: "", left: "", right: "" });
+  const [engravingPositions, setEngravingPositions] = useState<EngravingPosition[]>(["bottom"]);
+  const [multipleEngraving, setMultipleEngraving] = useState(false);
+  const [engraving, setEngraving] = useState<RingEngravingConfig[]>([]);
+  const [engravingFocusPosition, setEngravingFocusPosition] = useState<EngravingPosition>("bottom");
+  const [engravingPhotoPosition, setEngravingPhotoPosition] = useState<EngravingPosition>("bottom");
+  const [engravingPhotos, setEngravingPhotos] = useState<Record<string, RingPreviewImage | null>>({});
+  const [engravingStatus, setEngravingStatus] = useState<EngravingStatus>("idle");
+  const handleEngravingStatus = useCallback((status: EngravingStatus) => {
+    setEngravingStatus(status);
+    if (status === "unavailable") setCameraView(view => view === "engraving" ? "front" : view);
+  }, []);
+  const hasEngraving = engravingStatus === "ready" && engraving.length > 0;
+  const appliedPositions = engraving.map(item => item.position);
+  const focusPosition = appliedPositions.includes(engravingFocusPosition) ? engravingFocusPosition : appliedPositions[0] ?? "bottom";
+  const photoPosition = appliedPositions.includes(engravingPhotoPosition) ? engravingPhotoPosition : appliedPositions[0] ?? "bottom";
+  const isAutoRotating = cameraView === "front" && !isViewerHovered;
   const [previews, setPreviews] = useState<{ key: string; images: RingPreviewImage[] }>();
-  const [enlargedView, setEnlargedView] = useState<RingPreviewImage>();
+  const [enlargedView, setEnlargedView] = useState<{ key: string; image: RingPreviewImage; resolution: number; pending: boolean }>();
   const closeEnlargedView = useCallback(() => setEnlargedView(undefined), []);
+  const handleDetailPreview = useCallback((request: RingDetailPreviewRequest, image: RingPreviewImage | null) => {
+    if (request.resolution === RING_PREVIEW_RESOLUTION && request.engravingPosition) {
+      setEngravingPhotos(current => ({ ...Object.fromEntries(Object.entries(current).slice(-17)), [`${request.key}:${request.engravingPosition}`]: image }));
+      return;
+    }
+    setEnlargedView(current => current?.key === request.key && current.image.id === request.viewId && current.image.engravingPosition === request.engravingPosition ? { ...current, image: image ?? current.image, pending: false } : current);
+  }, []);
   const currentShape = catalog.shapes.find(item => item.id === selectedShapeId) ?? catalog.shapes[0];
   const currentHead = currentShape.carats.find(item => item.carat === selectedCarat) ?? currentShape.carats[0];
   const currentShank = catalog.shanks.find(item => item.id === selectedShankId) ?? catalog.shanks[0];
   const headMetal = catalog.metals.find(item => item.id === selectedHeadMetalId) ?? catalog.metals[0];
   const shankMetal = catalog.metals.find(item => item.id === selectedShankMetalId) ?? catalog.metals[0];
-  const previewKey = useMemo(() => JSON.stringify([RING_PREVIEW_VERSION, currentHead.file, currentShank.file, headMetal.hexCode, shankMetal.hexCode]), [currentHead.file, currentShank.file, headMetal.hexCode, shankMetal.hexCode]);
+  const previewKey = useMemo(() => JSON.stringify([RING_PREVIEW_VERSION, currentHead.file, currentShank.file, headMetal.hexCode, shankMetal.hexCode, engraving]), [currentHead.file, currentShank.file, headMetal.hexCode, shankMetal.hexCode, engraving]);
   const handlePreviews = useCallback((key: string, images: RingPreviewImage[]) => setPreviews({ key, images }), []);
-  const handleSelectCameraView = (view: "front" | "top" | "side") => { setCameraView(view); setCameraViewRevision(value => value + 1); setIsAutoRotating(view === "front"); };
+  const handleSelectCameraView = (view: RingCameraView) => { setCameraView(view); setCameraViewRevision(value => value + 1); };
+  const handleApplyEngraving = (position: EngravingPosition) => {
+    if (engravingTextError(engravingTexts[position])) return;
+    const next = { text: normalizeEngravingText(engravingTexts[position]), position };
+    const existing = engraving.find(item => item.position === position);
+    if (next.text !== existing?.text) { setEngraving(current => [...current.filter(item => item.position !== position), next]); setEngravingStatus("applying"); }
+    setEngravingFocusPosition(position); setEngravingPhotoPosition(position);
+    handleSelectCameraView("engraving");
+  };
+  const updateAppliedEngravings = (next: RingEngravingConfig[]) => {
+    setEngraving(next);
+    if (!next.length) { setEngravingStatus("idle"); if (cameraView === "engraving") handleSelectCameraView("front"); }
+  };
+  const handleRemoveEngraving = (position: EngravingPosition) => updateAppliedEngravings(engraving.filter(item => item.position !== position));
+  const handlePositionsChange = (positions: EngravingPosition[]) => {
+    setEngravingPositions(positions);
+    if (engraving.some(item => !positions.includes(item.position))) updateAppliedEngravings(engraving.filter(item => positions.includes(item.position)));
+  };
+  const handlePositionChange = (position: EngravingPosition) => handlePositionsChange(multipleEngraving ? engravingPositions.includes(position) ? engravingPositions.filter(item => item !== position) : [...engravingPositions, position] : [position]);
+  const handleMultipleChange = (enabled: boolean) => {
+    setMultipleEngraving(enabled);
+    if (!enabled) handlePositionsChange([engravingPositions.includes(focusPosition) ? focusPosition : engravingPositions[0] ?? "bottom"]);
+  };
   const handleReset = () => {
     setSelectedShapeId(catalog.defaults.shapeId); setSelectedCarat(catalog.defaults.carat); setSelectedShankId(catalog.defaults.shankId);
     setSelectedHeadMetalId(catalog.defaults.metalId); setSelectedShankMetalId(catalog.defaults.metalId); handleSelectCameraView("front");
+    setEngraving([]); setEngravingTexts({ bottom: "", left: "", right: "" }); setEngravingPositions(["bottom"]); setMultipleEngraving(false); setEngravingStatus("idle"); setEngravingFocusPosition("bottom"); setEngravingPhotoPosition("bottom");
   };
   const currentPreviews = previews?.key === previewKey;
+  const photoCacheKey = `${previewKey}:${photoPosition}`;
+  const selectedEngravingPhoto = engravingPhotos[photoCacheKey] ?? (currentPreviews ? previews.images.find(item => item.id === "engraving" && item.engravingPosition === photoPosition) : undefined);
+  const photoFailed = engravingPhotos[photoCacheKey] === null;
+  const detailRequest: RingDetailPreviewRequest | undefined = enlargedView
+    ? { key: enlargedView.key, viewId: enlargedView.image.id, resolution: enlargedView.resolution, engravingPosition: enlargedView.image.engravingPosition }
+    : hasEngraving && currentPreviews && !isModelLoading && !selectedEngravingPhoto && !photoFailed
+      ? { key: previewKey, viewId: "engraving", resolution: RING_PREVIEW_RESOLUTION, engravingPosition: photoPosition } : undefined;
   return <div className="atelier-app-root product-page">
-    <header className="product-site-header"><div className="product-brand"><svg viewBox="0 0 32 28" width="29" height="27" fill="none" stroke="currentColor" strokeWidth="1"><path d="M8 2h16l7 8-15 16L1 10 8 2Z" /><path d="m8 2 8 24 8-24M1 10h30M8 2l8 8 8-8" /></svg><span>SAANVI <small>ATELIER</small></span></div><span className="product-header-note">THE CUSTOM RING STUDIO</span></header>
     <main className="product-layout">
       <section className="product-gallery-column" aria-label="Your ring gallery">
         <div className="product-gallery-grid">
           <figure className="product-gallery-tile product-live-tile">
-            <ViewerStage currentView={cameraView} isAutoRotating={isAutoRotating} onSelectView={handleSelectCameraView} onToggleAutoRotate={() => setIsAutoRotating(value => !value)}>
+            <ViewerStage currentView={cameraView} onSelectView={handleSelectCameraView} onHoverChange={setIsViewerHovered} handSkinTone={handSkinTone} onChangeHandSkinTone={setHandSkinTone} hasEngraving={hasEngraving}
+              engravingPositions={appliedPositions} engravingPosition={focusPosition} onSelectEngraving={position => { setEngravingFocusPosition(position); handleSelectCameraView("engraving"); }}>
             <RingViewer headFile={currentHead.file} shankFile={currentShank.file} headScale={catalog.defaults.headScale} shankScale={catalog.defaults.shankScale}
               headMetalHex={headMetal.hexCode} shankMetalHex={shankMetal.hexCode} cameraView={cameraView} cameraViewRevision={cameraViewRevision}
-              isAutoRotating={isAutoRotating} ringTransform={FIXED_RING_TRANSFORM} onLoadingChange={setIsModelLoading} previewKey={previewKey} onPreviewImagesChange={handlePreviews} />
+              isAutoRotating={isAutoRotating} handSkinTone={handSkinTone} ringTransform={FIXED_RING_TRANSFORM} onLoadingChange={setIsModelLoading} previewKey={previewKey} onPreviewImagesChange={handlePreviews}
+              engraving={engraving} engravingFocusPosition={focusPosition} engravingPhotoPosition={photoPosition} onEngravingStatusChange={handleEngravingStatus}
+              detailPreviewRequest={detailRequest} onDetailPreviewChange={handleDetailPreview} />
             </ViewerStage>
           </figure>
-          {RING_PREVIEW_VIEWS.map((view, index) => {
-            const image = previews?.images.find(item => item.id === view.id);
-            return <figure key={view.id} className={`product-gallery-tile product-photo-tile ${currentPreviews ? "" : "is-refreshing"}`} aria-busy={!currentPreviews || isModelLoading}>
-              {image ? <button type="button" className="product-photo-button" onClick={() => setEnlargedView(image)} aria-label={`Enlarge ${view.label.toLowerCase()}`}><img src={image.url} alt={`${currentShape.name} diamond ring, ${view.label.toLowerCase()}`} /><span className="product-expand-icon" aria-hidden="true">⤢</span></button>
-                : <div className="product-photo-placeholder"><span aria-hidden="true">0{index + 2}</span></div>}
+          {getRingPreviewViews(engraving.length > 0 && engravingStatus !== "unavailable").map((view, index) => {
+            const image = view.id === "engraving" ? selectedEngravingPhoto : previews?.images.find(item => item.id === view.id);
+            return <figure key={view.id} className={`product-gallery-tile product-photo-tile ${currentPreviews ? "" : "is-refreshing"}`} aria-busy={!currentPreviews || isModelLoading || (view.id === "engraving" && !image && !photoFailed)}>
+              {image ? <button type="button" className="product-photo-button" disabled={!currentPreviews || isModelLoading} onClick={() => setEnlargedView({ key: previewKey, image, resolution: getRingDetailResolution(), pending: true })} aria-label={`Enlarge ${view.label.toLowerCase()}`}><img src={image.url} alt={`${currentShape.name} diamond ring, ${view.label.toLowerCase()}`} /><span className="product-expand-icon" aria-hidden="true">⤢</span></button>
+                : <div className="product-photo-placeholder">{view.id === "engraving" ? photoFailed ? <button type="button" onClick={() => setEngravingPhotos(current => { const next = { ...current }; delete next[photoCacheKey]; return next; })}>Retry engraving photo</button> : <small>Preparing engraving view…</small> : <span aria-hidden="true">0{index + 2}</span>}</div>}
+              {view.id === "engraving" && <EngravingPositionSwitch positions={appliedPositions} selected={photoPosition} onSelect={setEngravingPhotoPosition} location="photo" />}
               <figcaption>{view.label}</figcaption>
             </figure>;
           })}
         </div>
       </section>
       <ConfiguratorPanel catalog={catalog} selectedShapeId={currentShape.id} onSelectShape={setSelectedShapeId} selectedCarat={currentHead.carat} onSelectCarat={setSelectedCarat} selectedShankId={currentShank.id} onSelectShank={setSelectedShankId}
-        selectedHeadMetalId={headMetal.id} onSelectHeadMetal={setSelectedHeadMetalId} selectedShankMetalId={shankMetal.id} onSelectShankMetal={setSelectedShankMetalId} onReset={handleReset} />
+        selectedHeadMetalId={headMetal.id} onSelectHeadMetal={setSelectedHeadMetalId} selectedShankMetalId={shankMetal.id} onSelectShankMetal={setSelectedShankMetalId} onReset={handleReset}
+        engraving={{ texts: engravingTexts, positions: engravingPositions, multiple: multipleEngraving, applied: engraving, status: engravingStatus, busy: isModelLoading, onTextChange: (position, text) => setEngravingTexts(current => ({ ...current, [position]: text })), onPositionChange: handlePositionChange, onMultipleChange: handleMultipleChange, onApply: handleApplyEngraving, onRemove: handleRemoveEngraving }} />
     </main>
-    {enlargedView && <ImageLightbox image={enlargedView} onClose={closeEnlargedView} />}
+    {enlargedView && <ImageLightbox image={enlargedView.image} enhancing={enlargedView.pending} onClose={closeEnlargedView} />}
   </div>;
 };
 export default App;

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ModelThumbnail } from "./ModelThumbnail";
 import { assetUrl } from "../../config/assets";
 import type { RingCatalog } from "../../types/catalog";
+import { EngravingSection, type EngravingSectionProps } from "./EngravingSection";
 
 export interface ConfiguratorPanelProps {
   catalog: RingCatalog;
@@ -11,6 +12,7 @@ export interface ConfiguratorPanelProps {
   selectedHeadMetalId: string; onSelectHeadMetal: (id: string) => void;
   selectedShankMetalId: string; onSelectShankMetal: (id: string) => void;
   onReset: () => void;
+  engraving: EngravingSectionProps;
 }
 const shapeOrder = ["round", "princess", "cushion", "emerald", "pear", "oval", "radiant", "asscher", "marquise", "heart"];
 const MetalSelector = ({ part, selected, onSelect, metals }: { part: string; selected: string; onSelect: (id: string) => void; metals: RingCatalog["metals"] }) => {
@@ -75,10 +77,12 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
       {bands.length === 0 && <p className="product-empty-result">No styles match your search. <button onClick={() => { setSearch(""); setCategory("All styles"); }}>Show all styles</button></p>}
       <MetalSelector part="Band" selected={props.selectedShankMetalId} onSelect={props.onSelectShankMetal} metals={metals} />
     </section>
+    <EngravingSection {...props.engraving} />
     <details className="product-details"><summary>Your ring details</summary><dl>
       <div><dt>Diamond preview</dt><dd>{shape.name}, {props.selectedCarat} ct</dd></div><div><dt>Head</dt><dd>4-Prong Talon</dd></div>
       <div><dt>Head metal</dt><dd>{headMetal.name}</dd></div><div><dt>Band</dt><dd>{shank.name}</dd></div>
       <div><dt>Band metal</dt><dd>{shankMetal.name}</dd></div><div><dt>Collection</dt><dd>{shank.category}</dd></div>
+      {props.engraving.status === "ready" && props.engraving.applied.map(item => <div key={item.position}><dt>{item.position} engraving</dt><dd>{item.text}</dd></div>)}
     </dl></details>
     <button type="button" className="product-reset-design" onClick={props.onReset}>Reset design</button>
   </aside>;

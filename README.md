@@ -27,7 +27,7 @@ On screens up to 850px wide, the live viewer fills a square tile above a single 
 
 Photos open immediately from their existing preview with a 360ms expansion from the tapped thumbnail and close with a reverse transition. Image scaling compensates for the frame's shape change to preserve the ring's proportions. High-resolution generation starts after the opening animation completes, and closing cancels unfinished enhancement. Reduced-motion preferences skip the transitions. Image touch controls support pinch/pan and double-tap zoom.
 
-Enlarged photos use eight subpixel samples with linear accumulation to smooth ring edges and fine reflections. The 1200px gallery keeps its two-frame capture budget. Detail sampling yields between frames so closing can cancel unfinished work, and temporary accumulation targets are released after capture.
+Mobile live rendering uses the renderer's temporal anti-aliasing and a pixel density capped at 2. The 1200px gallery uses four subpixel samples on mobile and two frames on desktop; enlarged photos use eight samples. Photo clipping planes fit the actual assembly and floor to improve depth precision around thin metal edges. Sampling yields between frames so closing can cancel unfinished work, and temporary accumulation targets are released after capture.
 
 Only the default three-quarter view rotates automatically. Hovering anywhere in its canvas pauses rotation; leaving the canvas resumes it. Other views stay still, and the UI has no rotation toggle. Camera transitions warm up the destination scene behind a decoded frame before revealing the camera's movement. Every view, including Hand, follows the same smooth orbit path with eased zoom and target movement.
 

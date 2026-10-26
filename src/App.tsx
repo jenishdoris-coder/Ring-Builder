@@ -134,8 +134,8 @@ export const App = () => {
         selectedHeadMetalId={headMetal.id} onSelectHeadMetal={setSelectedHeadMetalId} selectedShankMetalId={shankMetal.id} onSelectShankMetal={setSelectedShankMetalId} onReset={handleReset}
         engraving={{ texts: engravingTexts, positions: engravingPositions, multiple: multipleEngraving, applied: engraving, status: engravingStatus, busy: isModelLoading, onTextChange: (position, text) => setEngravingTexts(current => ({ ...current, [position]: text })), onPositionChange: handlePositionChange, onMultipleChange: handleMultipleChange, onApply: handleApplyEngraving, onRemove: handleRemoveEngraving }} />
     </main>
-    {showCustomizationCue && !enlargedView && <button type="button" className="product-customization-scroll" aria-controls="ring-customization" onClick={() => { setShowCustomizationCue(false); document.getElementById("ring-customization")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }}>
-      <span>Scroll to explore customization</span><span className="product-customization-scroll-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5" /></svg></span>
+    {!enlargedView && <button type="button" className={`product-customization-scroll ${showCustomizationCue ? "" : "is-dismissed"}`} aria-hidden={!showCustomizationCue} tabIndex={showCustomizationCue ? 0 : -1} aria-controls="ring-customization" onClick={() => { setShowCustomizationCue(false); document.getElementById("ring-customization")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }}>
+      <span>Scroll to explore Customizations</span><span className="product-customization-scroll-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5" /></svg></span>
     </button>}
     {enlargedView && <ImageLightbox image={enlargedView.image} origin={enlargedView.origin} enhancing={enlargedView.pending && enlargedView.detailReady && !enlargedView.closing} onOpened={handleLightboxOpened} onClosing={handleLightboxClosing} onClose={closeEnlargedView} />}
   </div>;

@@ -49,7 +49,7 @@ root.add(new Mesh(new BoxGeometry(3, 1, 5), new MeshBasicMaterial()));
 root.rotation.set(Math.PI / 2, Math.PI, -1.22);
 root.position.set(1, -0.35, 2);
 const rootPose = { position: root.position.toArray(), quaternion: root.quaternion.toArray(), scale: root.scale.toArray() };
-const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION) => {
+const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION, mobileAA = false) => {
   const activeCamera = { position: new Vector3(3, 4, 8), target: new Vector3(0, 1, 0) };
   const progressive = { enabled: true, jitter: true };
   const floorMaterial = new MeshBasicMaterial({ opacity: 0.7, alphaMap: new Texture() });
@@ -62,7 +62,7 @@ const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION) => {
   const projections = [];
   const viewer = {
     scene: { activeCamera, renderCamera: activeCamera }, canvas: { width: 800, height: 800 }, renderEnabled: true,
-    getPluginByType: type => type === "Progressive" ? progressive : type === "ContactShadowGroundPlugin" ? ground : undefined, setDirty() {}, dispatchEvent() {},
+    getPluginByType: type => type === "Progressive" ? progressive : type === "TAA" ? { enabled: mobileAA } : type === "ContactShadowGroundPlugin" ? ground : undefined, setDirty() {}, dispatchEvent() {},
     renderer: {
       defaultRenderToScreen: true, renderSize: { x: 400, y: 400 }, displayCanvasScaling: 2,
       composer: { readBuffer: {} }, reset() {},
@@ -78,7 +78,7 @@ const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION) => {
         assert.notEqual(viewer.scene.renderCamera, activeCamera);
         assert.equal(viewer.canvas.width, expectedResolution, "photos are rendered at full resolution rather than enlarged from the gallery tile");
         assert.equal(viewer.canvas.height, expectedResolution);
-        assert.equal(progressive.enabled, expectedResolution > preview.RING_PREVIEW_RESOLUTION);
+        assert.equal(progressive.enabled, expectedResolution > preview.RING_PREVIEW_RESOLUTION || mobileAA);
         assert.equal(progressive.jitter, false, "photo sampling never jitters the live camera");
         const stagedBounds = new Box3().setFromObject(root);
         assert.ok(Math.abs(stagedBounds.min.y) < 1e-6, "each product pose rests on its floor");
@@ -152,6 +152,10 @@ assert.equal(smoothImage.width, 1800);
 assert.equal(smoothPhoto.count(), 8, "only enlarged photos use the additional edge-smoothing samples");
 assert.equal(new Set(smoothPhoto.projections.map(view => `${view.offsetX}:${view.offsetY}`)).size, 8, "each sample uses a different subpixel position without losing the centered photo projection");
 smoothPhoto.checkRestored();
+const mobilePhoto = makeViewer(1200, true);
+await preview.captureRingPreviews(mobilePhoto.viewer, [root], new AbortController().signal, { viewId: "profile" });
+assert.equal(mobilePhoto.count(), 4, "mobile gallery images receive edge smoothing without increasing their 1200px size");
+mobilePhoto.checkRestored();
 
 const cancelled = makeViewer();
 const controller = new AbortController();

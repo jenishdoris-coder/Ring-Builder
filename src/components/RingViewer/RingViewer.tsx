@@ -1591,7 +1591,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       const renderer = viewerAny.renderer;
       const isMobileDevice =
         mobileAndTabletCheck?.() || window.innerWidth <= 768;
-      const renderScale = isMobileDevice ? DISPLAY_CANVAS_SCALING : 2;
+      const renderScale = isMobileDevice ? Math.min(2, Math.max(DISPLAY_CANVAS_SCALING, window.devicePixelRatio || 1)) : 2;
       if (renderer && typeof renderer.renderScale !== "undefined") {
         renderer.renderScale = renderScale;
       } else if (renderer && typeof renderer.displayCanvasScaling !== "undefined") {
@@ -1788,7 +1788,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       const temporalAAPlugin: any = await getOrAddPlugin(TemporalAAPlugin);
       temporalAAPluginRef.current = temporalAAPlugin;
       if (temporalAAPlugin) {
-        temporalAAPlugin.enabled = TEMPORAL_AA_ENABLED;
+        temporalAAPlugin.enabled = isMobileDevice || TEMPORAL_AA_ENABLED;
         if ("stableNoise" in temporalAAPlugin) {
           temporalAAPlugin.stableNoise = TEMPORAL_AA_USE_TOTAL_FRAME_COUNT;
         } else if ("useTotalFrameCount" in temporalAAPlugin) {

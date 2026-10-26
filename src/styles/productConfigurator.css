@@ -109,7 +109,19 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 @media (max-width: 1100px) { .product-layout { padding: 24px 24px 50px; grid-template-columns: minmax(0, 1fr) 350px; gap: 25px; } .product-heading h1 { font-size: 21px; } .product-heading h1 > span { font-size: 18px; } }
 @media (max-width: 850px) { .product-layout { grid-template-columns: 1fr; max-width: 720px; padding: 20px 20px 40px; gap: 25px; } .product-gallery-column { position: relative; top: 0; } .product-configurator { max-width: 540px; width: 100%; margin: auto; } .product-heading h1 { font-size: 25px; } .product-heading h1 > span { font-size: 21px; } .product-option-tile { min-height: 97px; } .product-option-tile > span:last-child { font-size: 12px; } }
 @media (max-width: 480px) { .product-layout { padding: 18px 14px 35px; } .product-gallery-grid { gap: 7px; } .product-photo-tile figcaption { font-size: 8px; bottom: 12px; left: 12px; } .product-heading h1 { font-size: 23px; } .product-heading h1 > span { font-size: 19px; } .product-option-grid { gap: 7px; } .product-option-tile > span:last-child { font-size: 11px; } .product-bands .product-option-tile { min-height: 104px; } }
-@media (max-width: 850px) { .product-gallery-grid { height: auto; min-height: 0; max-height: none; grid-template-rows: none; } .product-gallery-tile { aspect-ratio: 1; } }
+@media (max-width: 850px) {
+  .product-gallery-grid { height: auto; min-height: 0; max-height: none; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; }
+  .product-gallery-tile { aspect-ratio: 1; }
+  .product-live-tile { grid-column: 1 / -1; }
+  .product-photo-tile figcaption { left: 6px; right: 6px; bottom: 6px; font-size: 8px; line-height: 1.25; letter-spacing: 0; text-align: center; }
+  .product-photo-tile .product-expand-icon { top: 4px; right: 6px; font-size: 14px; opacity: .8; }
+  .product-photo-tile .engraving-photo-switch { left: 4px; right: 4px; bottom: 4px; padding: 2px; gap: 0; }
+  .product-photo-tile .engraving-photo-switch > span { display: none; }
+  .product-photo-tile .engraving-photo-switch > div { width: 100%; gap: 1px; }
+  .product-photo-tile .engraving-photo-switch button { flex: 1; min-width: 0; padding: 5px 1px; font-size: 7px; }
+  .product-photo-tile:has(.engraving-photo-switch) figcaption { bottom: 31px; }
+  .product-photo-placeholder small { padding: 6px; font-size: 9px; text-align: center; }
+}
 
 .product-viewer-stage { --viewer-right-rail: 64px; position: absolute; inset: 0; background: #fff; overflow: hidden; }
 .viewer-right-rail { position: absolute; z-index: 6; top: 0; right: 0; bottom: 0; width: var(--viewer-right-rail); display: grid; place-items: center; pointer-events: none; }
@@ -172,3 +184,9 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 @media (max-width: 480px) { .product-viewer-stage { --viewer-right-rail: 48px; } .hand-tone-control { width: 38px; padding: 8px 5px 10px; border-radius: 9px; gap: 8px; } .hand-tone-heading > label { font-size: 8px; } .hand-tone-swatch { width: 12px; height: 12px; } .hand-tone-range { height: 74px; } }
 
 @media (max-width: 600px) { .product-image-zoom-hint { top: 22px; left: 18px; max-width: calc(100% - 85px); font-size: 9px; line-height: 1.5; } }
+
+@media (max-width: 850px) {
+  .product-viewer-stage:not(.is-expanded) .viewer-icon-controls { gap: 3px; padding: 5px; }
+  .product-viewer-stage:not(.is-expanded) .viewer-icon-controls > button { width: 30px; height: 30px; padding: 6px; border-radius: 7px; }
+  .product-viewer-stage:not(.is-expanded) .viewer-icon-controls svg { width: 18px; height: 18px; }
+}

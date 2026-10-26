@@ -1,4 +1,7 @@
 import { ENGRAVING_MAX_CHARACTERS, ENGRAVING_POSITIONS, engravingTextError, type EngravingPosition, type EngravingStatus, type RingEngravingConfig } from "../../config/engraving";
+import bottomExample from "../../assets/engraving/bottom.webp";
+import rightExample from "../../assets/engraving/right.webp";
+import leftExample from "../../assets/engraving/left.webp";
 
 export interface EngravingSectionProps {
   texts: Record<EngravingPosition, string>;
@@ -15,20 +18,11 @@ export interface EngravingSectionProps {
 }
 
 const PositionExample = ({ position }: { position: EngravingPosition }) => {
-  const id = `engraving-example-${position}`;
-  const arc = position === "bottom" ? "M53 94Q80 109 107 94" : position === "right" ? "M110 48Q125 68 110 88" : "M50 88Q35 68 50 48";
-  return <svg className="engraving-position-example" viewBox="0 0 160 122" aria-hidden="true">
-    <defs>
-      <linearGradient id={`${id}-metal`} x1="0" y1="0" x2="1" y2=".8"><stop stopColor="#a7aab0" /><stop offset=".22" stopColor="#f8f9fa" /><stop offset=".48" stopColor="#b7bac1" /><stop offset=".72" stopColor="#fff" /><stop offset="1" stopColor="#979ba4" /></linearGradient>
-      <linearGradient id={`${id}-inside`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#bec2c9" /><stop offset=".5" stopColor="#f4f5f7" /><stop offset="1" stopColor="#d3d6db" /></linearGradient>
-      <path id={`${id}-text`} d={arc} />
-    </defs>
-    <path d="M31 65a49 43 0 1 0 98 0 49 43 0 1 0-98 0Zm13 0a36 33 0 1 1 72 0 36 33 0 1 1-72 0Z" fill={`url(#${id}-metal)`} fillRule="evenodd" stroke="#b3b7bf" strokeWidth=".6" />
-    <path d="M43 64c0 20 16 34 37 34s37-14 37-34v7c0 22-16 37-37 37S43 93 43 71Z" fill={`url(#${id}-inside)`} />
-    <path d="M44 66c0 19 16 33 36 33s36-14 36-33" fill="none" stroke="#9298a2" strokeWidth=".7" />
-    <path d="m62 22 7-12h22l7 12-18 18-18-18Zm0 0h36M69 10l11 30 11-30M65 29l6 12m24-12-6 12" fill="#f8fbff" stroke="#8c95a4" strokeWidth="1.2" strokeLinejoin="round" />
-    <path d={arc} fill="none" stroke="#c6a66a" strokeWidth="12" strokeLinecap="round" opacity=".27" />
-    <text fill="#785824" fontSize="7.8" fontFamily="Georgia, serif" letterSpacing=".45"><textPath href={`#${id}-text`} startOffset="50%" textAnchor="middle">YOUR TEXT</textPath></text>
+  const example = { bottom: bottomExample, right: rightExample, left: leftExample }[position];
+  const marker = { bottom: [220, 183], right: [199, 197], left: [241, 197] }[position];
+  return <svg className="engraving-position-example" viewBox="30 140 380 280" aria-hidden="true">
+    <image href={example} width="440" height="440" />
+    <ellipse cx={marker[0]} cy={marker[1]} rx="35" ry="18" fill="#b4955920" stroke="#a48348" strokeWidth="3" />
   </svg>;
 };
 

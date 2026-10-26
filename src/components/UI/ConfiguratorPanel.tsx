@@ -18,7 +18,7 @@ const shapeOrder = ["round", "princess", "cushion", "emerald", "pear", "oval", "
 const MetalSelector = ({ part, selected, onSelect, metals }: { part: string; selected: string; onSelect: (id: string) => void; metals: RingCatalog["metals"] }) => {
   const current = metals.find(metal => metal.id === selected)!;
   return <fieldset className="product-metal-selector">
-    <legend>Select metal: <strong>{current.name}</strong></legend>
+    <legend>Select {part.toLowerCase()} metal: <strong>{current.name}</strong></legend>
     <div className="product-metal-options">{metals.map(metal => <button key={metal.id} type="button"
       className={`product-metal-option ${selected === metal.id ? "selected" : ""}`} aria-label={`${part} metal: ${metal.name}`}
       aria-pressed={selected === metal.id} title={metal.name} onClick={() => onSelect(metal.id)}>

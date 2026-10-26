@@ -23,6 +23,8 @@ The live canvas fills its tile, and the default camera centres and fits the comp
 
 Diamond and side photos centre the projected ring outline in the image, preserving their viewing angles, size and floor contact. The same framing is used for their higher-resolution zoom versions.
 
+On screens up to 850px wide, the live viewer fills a square tile above a single row of three square photo thumbnails. Tapping a thumbnail opens the existing image zoom overlay. The engraving-position cards use static renders of the actual ring with the inscription area highlighted; these are generated once rather than rendered on each visit. Head and band metal selectors are labelled separately.
+
 Only the default three-quarter view rotates automatically. Hovering anywhere in its canvas pauses rotation; leaving the canvas resumes it. Other views stay still, and the UI has no rotation toggle. Camera transitions warm up the destination scene behind a decoded frame before revealing the camera's movement. Every view, including Hand, follows the same smooth orbit path with eased zoom and target movement.
 
 Selecting the three-quarter view also resets a manually moved camera. Each view starts with fresh orbit controls after its camera transition, clearing the previous view's up-axis and mouse momentum so automatic rotation always uses the default upright axis and target. The catalog contains 33 band styles; Curve is excluded.

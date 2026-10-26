@@ -23,7 +23,11 @@ The live canvas fills its tile, and the default camera centres and fits the comp
 
 Diamond and side photos centre the projected ring outline in the image, preserving their viewing angles, size and floor contact. The same framing is used for their higher-resolution zoom versions.
 
-On screens up to 850px wide, the live viewer fills a square tile above a single row of three square photo thumbnails. Tapping a thumbnail opens the existing image zoom overlay. The engraving-position cards use static renders of the actual ring with the inscription area highlighted; these are generated once rather than rendered on each visit. Head and band metal selectors are labelled separately.
+On screens up to 850px wide, the live viewer fills a square tile above a single row of three square photo thumbnails. Canvas controls form a horizontal bar at the bottom. A floating scroll prompt takes the shopper to the customization options and disappears after scrolling. Drag and pinch gestures stay captured by the canvas after model/photo updates; touching the viewer pauses default rotation until 2.5 seconds after release. The engraving-position cards use static renders of the actual ring with the inscription area highlighted; these are generated once rather than rendered on each visit. Head and band metal selectors are labelled separately.
+
+Photos open immediately from their existing preview with a 360ms expansion from the tapped thumbnail and close with a reverse transition. Image scaling compensates for the frame's shape change to preserve the ring's proportions. High-resolution generation starts after the opening animation completes, and closing cancels unfinished enhancement. Reduced-motion preferences skip the transitions. Image touch controls support pinch/pan and double-tap zoom.
+
+Enlarged photos use eight subpixel samples with linear accumulation to smooth ring edges and fine reflections. The 1200px gallery keeps its two-frame capture budget. Detail sampling yields between frames so closing can cancel unfinished work, and temporary accumulation targets are released after capture.
 
 Only the default three-quarter view rotates automatically. Hovering anywhere in its canvas pauses rotation; leaving the canvas resumes it. Other views stay still, and the UI has no rotation toggle. Camera transitions warm up the destination scene behind a decoded frame before revealing the camera's movement. Every view, including Hand, follows the same smooth orbit path with eased zoom and target movement.
 

@@ -38,7 +38,7 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
   const head = shape.carats.find(item => item.carat === props.selectedCarat) ?? shape.carats[0];
   const categories = useMemo(() => ["All styles", ...new Set(shanks.map(item => item.category))], [shanks]);
   const bands = shanks.filter(item => (category === "All styles" || item.category === category) && `${item.name} ${item.category}`.toLowerCase().includes(search.toLowerCase()));
-  return <aside className="product-configurator" aria-label="Ring Customizer">
+  return <aside id="ring-customization" className="product-configurator" aria-label="Ring Customizer">
     <div className="product-heading">
       <div className="product-eyebrow">Made personal. Made yours.</div>
       <h1>{shank.name}<br /><span>4-Prong Talon Engagement Ring</span></h1>

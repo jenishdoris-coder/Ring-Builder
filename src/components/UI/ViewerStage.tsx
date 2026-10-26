@@ -22,6 +22,14 @@ export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHan
   const [expanded, setExpanded] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const touches = useRef(new Set<number>());
+  const resumeRotation = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(resumeRotation.current), []);
+  const finishTouch = (pointerId: number) => {
+    touches.current.delete(pointerId);
+    clearTimeout(resumeRotation.current);
+    if (touches.current.size === 0) resumeRotation.current = setTimeout(() => onHoverChange(false), 2500);
+  };
 
   useEffect(() => {
     if (!expanded) return;
@@ -51,11 +59,14 @@ export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHan
   return <>
     {expanded && <div className="product-viewer-backdrop" aria-hidden="true" onClick={() => setExpanded(false)} />}
     <div ref={stageRef} className={`product-viewer-stage ${expanded ? "is-expanded" : ""} ${controls.currentView === "hand" ? "is-hand-preview" : ""}`} role={expanded ? "dialog" : undefined} aria-modal={expanded ? true : undefined} aria-label="Interactive 3D ring viewer"
-      onPointerEnter={event => { if (event.pointerType !== "touch") onHoverChange(true); }} onPointerLeave={() => onHoverChange(false)}>
+      onPointerEnter={event => { if (event.pointerType !== "touch") onHoverChange(true); }} onPointerLeave={event => { if (event.pointerType !== "touch") onHoverChange(false); }}
+      onPointerDownCapture={event => { if (event.pointerType === "touch") { touches.current.add(event.pointerId); clearTimeout(resumeRotation.current); onHoverChange(true); } }}
+      onPointerUpCapture={event => { if (event.pointerType === "touch") finishTouch(event.pointerId); }} onPointerCancelCapture={event => { if (event.pointerType === "touch") finishTouch(event.pointerId); }}>
       {children}
       {expanded && <button ref={closeRef} type="button" className="viewer-close-expanded" aria-label="Close expanded viewer" title="Close expanded viewer" onClick={() => setExpanded(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>}
       <div className="product-live-caption"><span className="product-live-dot" />{controls.currentView === "hand" ? "On-hand preview" : controls.currentView === "engraving" ? "Engraving detail" : "Interactive 3D"}</div>
       <CameraControls {...controls} isExpanded={expanded} onToggleExpanded={() => setExpanded(value => !value)} />
+      <span className="viewer-touch-hint">Drag to rotate · Pinch to zoom</span>
       <EngravingPositionSwitch positions={engravingPositions} selected={engravingPosition} onSelect={onSelectEngraving} location="viewer" />
       <aside className="viewer-right-rail" aria-label={controls.currentView === "hand" ? "Hand appearance" : undefined}>
         {controls.currentView === "hand" && <HandToneControl value={handSkinTone} onChange={onChangeHandSkinTone} />}

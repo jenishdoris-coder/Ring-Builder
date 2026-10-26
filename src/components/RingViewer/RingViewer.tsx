@@ -440,7 +440,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.style.pointerEvents = enabled ? "auto" : "none";
-      canvas.style.touchAction = enabled ? "auto" : "none";
+      // OrbitControls owns drag and pinch gestures even after a capture unlock.
+      canvas.style.touchAction = "none";
     }
   }, []);
 
@@ -1910,7 +1911,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             controls.enableRotate = true;
             controls.enablePan = true;
             controls.screenSpacePanning = true;
-            controls.rotateSpeed = view === "hand" ? 0.55 : 0.8;
+            controls.rotateSpeed = view === "hand" ? 0.55 : mobile ? 0.65 : 0.8;
+            controls.panSpeed = mobile ? 0.65 : 1;
             controls.zoomSpeed = view === "hand" ? 2.6 : mobile ? 1.4 : 2.0;
             controls.zoomToCursor = view === "hand";
             controls.autoRotateSpeed = CAMERA_AUTO_ROTATE_SPEED;

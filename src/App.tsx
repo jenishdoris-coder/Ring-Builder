@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import RingViewer from "./components/RingViewer";
 import { ViewerStage } from "./components/UI/ViewerStage";
 import { ConfiguratorPanel } from "./components/UI/ConfiguratorPanel";
-import { ImageLightbox } from "./components/UI/ImageLightbox";
+import { ImageLightbox, type ImageOrigin } from "./components/UI/ImageLightbox";
 import { DEFAULT_RING_CONFIG } from "./config/staticModels";
 import { useCatalog } from "./hooks/useCatalog";
 import { FIXED_RING_TRANSFORM } from "./config/ringConfig";
@@ -25,6 +25,13 @@ export const App = () => {
   const [cameraView, setCameraView] = useState<RingCameraView>("front");
   const [cameraViewRevision, setCameraViewRevision] = useState(0);
   const [isViewerHovered, setIsViewerHovered] = useState(false);
+  const [showCustomizationCue, setShowCustomizationCue] = useState(true);
+  useEffect(() => {
+    const dismiss = () => { if (window.scrollY > 24) setShowCustomizationCue(false); };
+    dismiss();
+    window.addEventListener("scroll", dismiss, { passive: true });
+    return () => window.removeEventListener("scroll", dismiss);
+  }, []);
   const [handSkinTone, setHandSkinTone] = useState(DEFAULT_SKIN_TONE);
   const [engravingTexts, setEngravingTexts] = useState<Record<EngravingPosition, string>>({ bottom: "", left: "", right: "" });
   const [engravingPositions, setEngravingPositions] = useState<EngravingPosition[]>(["bottom"]);
@@ -44,8 +51,10 @@ export const App = () => {
   const photoPosition = appliedPositions.includes(engravingPhotoPosition) ? engravingPhotoPosition : appliedPositions[0] ?? "bottom";
   const isAutoRotating = cameraView === "front" && !isViewerHovered;
   const [previews, setPreviews] = useState<{ key: string; images: RingPreviewImage[] }>();
-  const [enlargedView, setEnlargedView] = useState<{ key: string; image: RingPreviewImage; resolution: number; pending: boolean }>();
+  const [enlargedView, setEnlargedView] = useState<{ key: string; image: RingPreviewImage; resolution: number; pending: boolean; detailReady: boolean; closing: boolean; origin: ImageOrigin }>();
   const closeEnlargedView = useCallback(() => setEnlargedView(undefined), []);
+  const handleLightboxOpened = useCallback(() => setEnlargedView(current => current && !current.closing ? { ...current, detailReady: true } : current), []);
+  const handleLightboxClosing = useCallback(() => setEnlargedView(current => current ? { ...current, detailReady: false, closing: true } : current), []);
   const handleDetailPreview = useCallback((request: RingDetailPreviewRequest, image: RingPreviewImage | null) => {
     if (request.resolution === RING_PREVIEW_RESOLUTION && request.engravingPosition) {
       setEngravingPhotos(current => ({ ...Object.fromEntries(Object.entries(current).slice(-17)), [`${request.key}:${request.engravingPosition}`]: image }));
@@ -93,7 +102,7 @@ export const App = () => {
   const selectedEngravingPhoto = engravingPhotos[photoCacheKey] ?? (currentPreviews ? previews.images.find(item => item.id === "engraving" && item.engravingPosition === photoPosition) : undefined);
   const photoFailed = engravingPhotos[photoCacheKey] === null;
   const detailRequest: RingDetailPreviewRequest | undefined = enlargedView
-    ? { key: enlargedView.key, viewId: enlargedView.image.id, resolution: enlargedView.resolution, engravingPosition: enlargedView.image.engravingPosition }
+    ? enlargedView.detailReady && !enlargedView.closing ? { key: enlargedView.key, viewId: enlargedView.image.id, resolution: enlargedView.resolution, engravingPosition: enlargedView.image.engravingPosition } : undefined
     : hasEngraving && currentPreviews && !isModelLoading && !selectedEngravingPhoto && !photoFailed
       ? { key: previewKey, viewId: "engraving", resolution: RING_PREVIEW_RESOLUTION, engravingPosition: photoPosition } : undefined;
   return <div className="atelier-app-root product-page">
@@ -113,7 +122,7 @@ export const App = () => {
           {getRingPreviewViews(engraving.length > 0 && engravingStatus !== "unavailable").map((view, index) => {
             const image = view.id === "engraving" ? selectedEngravingPhoto : previews?.images.find(item => item.id === view.id);
             return <figure key={view.id} className={`product-gallery-tile product-photo-tile ${currentPreviews ? "" : "is-refreshing"}`} aria-busy={!currentPreviews || isModelLoading || (view.id === "engraving" && !image && !photoFailed)}>
-              {image ? <button type="button" className="product-photo-button" disabled={!currentPreviews || isModelLoading} onClick={() => setEnlargedView({ key: previewKey, image, resolution: getRingDetailResolution(), pending: true })} aria-label={`Enlarge ${view.label.toLowerCase()}`}><img src={image.url} alt={`${currentShape.name} diamond ring, ${view.label.toLowerCase()}`} /><span className="product-expand-icon" aria-hidden="true">⤢</span></button>
+              {image ? <button type="button" className="product-photo-button" disabled={!currentPreviews || isModelLoading} onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); setEnlargedView({ key: previewKey, image, resolution: getRingDetailResolution(), pending: true, detailReady: false, closing: false, origin: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } }); }} aria-label={`Enlarge ${view.label.toLowerCase()}`}><img src={image.url} alt={`${currentShape.name} diamond ring, ${view.label.toLowerCase()}`} /><span className="product-expand-icon" aria-hidden="true">⤢</span></button>
                 : <div className="product-photo-placeholder">{view.id === "engraving" ? photoFailed ? <button type="button" onClick={() => setEngravingPhotos(current => { const next = { ...current }; delete next[photoCacheKey]; return next; })}>Retry engraving photo</button> : <small>Preparing engraving view…</small> : <span aria-hidden="true">0{index + 2}</span>}</div>}
               {view.id === "engraving" && <EngravingPositionSwitch positions={appliedPositions} selected={photoPosition} onSelect={setEngravingPhotoPosition} location="photo" />}
               <figcaption>{view.label}</figcaption>
@@ -125,7 +134,10 @@ export const App = () => {
         selectedHeadMetalId={headMetal.id} onSelectHeadMetal={setSelectedHeadMetalId} selectedShankMetalId={shankMetal.id} onSelectShankMetal={setSelectedShankMetalId} onReset={handleReset}
         engraving={{ texts: engravingTexts, positions: engravingPositions, multiple: multipleEngraving, applied: engraving, status: engravingStatus, busy: isModelLoading, onTextChange: (position, text) => setEngravingTexts(current => ({ ...current, [position]: text })), onPositionChange: handlePositionChange, onMultipleChange: handleMultipleChange, onApply: handleApplyEngraving, onRemove: handleRemoveEngraving }} />
     </main>
-    {enlargedView && <ImageLightbox image={enlargedView.image} enhancing={enlargedView.pending} onClose={closeEnlargedView} />}
+    {showCustomizationCue && !enlargedView && <button type="button" className="product-customization-scroll" aria-controls="ring-customization" onClick={() => { setShowCustomizationCue(false); document.getElementById("ring-customization")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }}>
+      <span>Scroll to explore customization</span><span className="product-customization-scroll-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5" /></svg></span>
+    </button>}
+    {enlargedView && <ImageLightbox image={enlargedView.image} origin={enlargedView.origin} enhancing={enlargedView.pending && enlargedView.detailReady && !enlargedView.closing} onOpened={handleLightboxOpened} onClosing={handleLightboxClosing} onClose={closeEnlargedView} />}
   </div>;
 };
 export default App;

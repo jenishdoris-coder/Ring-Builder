@@ -49,9 +49,9 @@ root.add(new Mesh(new BoxGeometry(3, 1, 5), new MeshBasicMaterial()));
 root.rotation.set(Math.PI / 2, Math.PI, -1.22);
 root.position.set(1, -0.35, 2);
 const rootPose = { position: root.position.toArray(), quaternion: root.quaternion.toArray(), scale: root.scale.toArray() };
-const makeViewer = () => {
+const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION) => {
   const activeCamera = { position: new Vector3(3, 4, 8), target: new Vector3(0, 1, 0) };
-  const progressive = { enabled: true };
+  const progressive = { enabled: true, jitter: true };
   const floorMaterial = new MeshBasicMaterial({ opacity: 0.7, alphaMap: new Texture() });
   const floor = new Mesh(new BoxGeometry(1, 1, 0.001), floorMaterial);
   floor.position.set(1, -4, 2);
@@ -59,6 +59,7 @@ const makeViewer = () => {
   const savedShadowCamera = ground.shadowCamera.clone();
   let renders = 0;
   const poses = [];
+  const projections = [];
   const viewer = {
     scene: { activeCamera, renderCamera: activeCamera }, canvas: { width: 800, height: 800 }, renderEnabled: true,
     getPluginByType: type => type === "Progressive" ? progressive : type === "ContactShadowGroundPlugin" ? ground : undefined, setDirty() {}, dispatchEvent() {},
@@ -75,8 +76,10 @@ const makeViewer = () => {
         assert.equal(viewer.renderEnabled, false);
         assert.equal(viewer.scene.activeCamera, activeCamera);
         assert.notEqual(viewer.scene.renderCamera, activeCamera);
-        assert.equal(viewer.canvas.width, preview.RING_PREVIEW_RESOLUTION, "photos are rendered at full resolution rather than enlarged from the gallery tile");
-        assert.equal(viewer.canvas.height, preview.RING_PREVIEW_RESOLUTION);
+        assert.equal(viewer.canvas.width, expectedResolution, "photos are rendered at full resolution rather than enlarged from the gallery tile");
+        assert.equal(viewer.canvas.height, expectedResolution);
+        assert.equal(progressive.enabled, expectedResolution > preview.RING_PREVIEW_RESOLUTION);
+        assert.equal(progressive.jitter, false, "photo sampling never jitters the live camera");
         const stagedBounds = new Box3().setFromObject(root);
         assert.ok(Math.abs(stagedBounds.min.y) < 1e-6, "each product pose rests on its floor");
         assert.ok(ground.shadowCamera.far > stagedBounds.max.y, "the shadow camera includes the entire ring");
@@ -87,6 +90,7 @@ const makeViewer = () => {
         assert.equal(floor.material.map, floorMaterial.alphaMap, "photos use the generated depth shadow, rather than a painted ellipse");
         assert.equal(floor.material.userData.renderToDepth, true, "the floor participates in WebGI's shared depth buffer");
         renders++; poses.push(viewer.scene.renderCamera.cameraObject.position.toArray());
+        projections.push({ ...viewer.scene.renderCamera.cameraObject.view });
       },
       renderTargetToDataUrl: () => `data:image/png;frame=${renders}`,
     },
@@ -96,6 +100,7 @@ const makeViewer = () => {
     assert.equal(viewer.renderEnabled, true);
     assert.equal(viewer.renderer.defaultRenderToScreen, true);
     assert.equal(progressive.enabled, true);
+    assert.equal(progressive.jitter, true);
     assert.deepEqual(viewer.renderer.renderSize, {x: 400, y: 400}, "live rendering resolution is restored after export, cancellation, or errors");
     assert.deepEqual(activeCamera.position.toArray(), [3, 4, 8]);
     assert.deepEqual(activeCamera.target.toArray(), [0, 1, 0]);
@@ -111,7 +116,7 @@ const makeViewer = () => {
     assert.deepEqual(ground.shadowCamera.projectionMatrix.elements, savedShadowCamera.projectionMatrix.elements);
     assert.deepEqual(ground.shadowCamera.position.toArray(), savedShadowCamera.position.toArray());
   };
-  return { viewer, checkRestored, poses, count: () => renders };
+  return { viewer, checkRestored, poses, projections, count: () => renders };
 };
 
 const complete = makeViewer();
@@ -139,6 +144,14 @@ const detail = await preview.captureRingPreviews(engravingOnly.viewer, [root], n
 assert.equal(detail.length, 1);
 assert.equal(engravingOnly.count(), 2, "zooming the engraving regenerates only its selected image");
 engravingOnly.checkRestored();
+
+globalThis.requestAnimationFrame = callback => { callback(0); return 0; };
+const smoothPhoto = makeViewer(1800);
+const [smoothImage] = await preview.captureRingPreviews(smoothPhoto.viewer, [root], new AbortController().signal, { viewId: "profile", resolution: 1800 });
+assert.equal(smoothImage.width, 1800);
+assert.equal(smoothPhoto.count(), 8, "only enlarged photos use the additional edge-smoothing samples");
+assert.equal(new Set(smoothPhoto.projections.map(view => `${view.offsetX}:${view.offsetY}`)).size, 8, "each sample uses a different subpixel position without losing the centered photo projection");
+smoothPhoto.checkRestored();
 
 const cancelled = makeViewer();
 const controller = new AbortController();

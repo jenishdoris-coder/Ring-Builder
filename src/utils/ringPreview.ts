@@ -5,7 +5,7 @@ import type { EngravingPosition } from "../config/engraving";
 export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
 export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition };
 export const RING_PREVIEW_RESOLUTION = 1200;
-export const RING_PREVIEW_VERSION = "studio-1200-multiple-engraving-v11";
+export const RING_PREVIEW_VERSION = "studio-1200-multiple-engraving-v12";
 
 /** Render just the enlarged photograph at a resolution suited to 3x zoom. */
 export const getRingDetailResolution = () => {
@@ -279,10 +279,12 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
   const originalRenderToScreen = renderer.defaultRenderToScreen;
   const originalRenderEnabled = viewer.renderEnabled;
   const originalProgressive = progressive?.enabled;
+  const originalJitter = progressive?.jitter;
   const originalSize = { width: renderer.renderSize.x, height: renderer.renderSize.y };
   const scale = renderer.displayCanvasScaling || 1;
   const requestedResolution = options.resolution ?? RING_PREVIEW_RESOLUTION;
   const resolution = Math.min(requestedResolution, renderer.rendererObject?.capabilities.maxTextureSize ?? requestedResolution);
+  const smoothDetail = resolution > RING_PREVIEW_RESOLUTION && Boolean(progressive);
   const aspect = 1;
   const camera = new CameraController(new PerspectiveCamera(25, aspect, 0.01, 100), { controlsMode: "", controlsEnabled: false, aspect, fov: 25 }, viewer.canvas);
   if (!roots.length || ringBounds(roots).isEmpty()) { camera.dispose(); return []; }
@@ -298,7 +300,14 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
     renderer.setSize(viewer.canvas.clientWidth || originalSize.width, viewer.canvas.clientHeight || originalSize.height, true);
     renderer.defaultRenderToScreen = originalRenderToScreen;
     viewer.renderEnabled = originalRenderEnabled;
-    if (progressive) progressive.enabled = originalProgressive;
+    if (progressive) {
+      // WebGI keeps accumulation targets by camera UUID. Photo cameras are
+      // temporary, so release their history rather than retaining GPU memory.
+      const history = progressive.getLastFrame?.(camera);
+      if (history) { renderer.disposeTarget?.(history); progressive._lastFrames?.delete(camera.cameraObject.uuid); }
+      progressive.enabled = originalProgressive;
+      progressive.jitter = originalJitter;
+    }
     renderer.reset();
     viewer.setDirty();
     camera.dispose();
@@ -309,7 +318,12 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
     if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
     renderer.defaultRenderToScreen = false;
     viewer.renderEnabled = false;
-    if (progressive) progressive.enabled = false;
+    if (progressive) {
+      progressive.enabled = smoothDetail;
+      // Its built-in jitter targets the live camera; jitter our photo camera
+      // explicitly and preserve the outline-centering projection offset.
+      progressive.jitter = false;
+    }
     scene.renderCamera = camera;
     // Resize every render target through WebGI, including the shared depth buffer.
     renderer.setSize(resolution / scale, resolution / scale, true);
@@ -335,11 +349,19 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
       camera.position.copy(camera.cameraObject.position);
       camera.target.copy(engravingPose?.target ?? bounds.getCenter(new Vector3()));
       renderer.reset();
-      for (let frame = 0; frame < 2; frame++) {
+      const projection = camera.cameraObject.view?.enabled ? { ...camera.cameraObject.view } : { fullWidth: resolution, fullHeight: resolution, offsetX: 0, offsetY: 0, width: resolution, height: resolution };
+      const samples = [[-.375, -.125], [.125, -.375], [.375, .125], [-.125, .375], [-.375, .375], [.375, -.375], [-.125, -.125], [.125, .125]];
+      for (let frame = 0; frame < (smoothDetail ? samples.length : 2); frame++) {
+        if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
+        if (smoothDetail) {
+          const [x, y] = samples[frame];
+          camera.cameraObject.setViewOffset(projection.fullWidth, projection.fullHeight, projection.offsetX + x * projection.width / resolution, projection.offsetY + y * projection.height / resolution, projection.width, projection.height);
+        }
         viewer.dispatchEvent({ type: "preRender", target: viewer });
         scene.renderCamera = camera;
         renderer.render(false);
         viewer.dispatchEvent({ type: "postRender", target: viewer });
+        if (smoothDetail && frame < samples.length - 1) await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       }
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       const target = renderer.composer.readBuffer;

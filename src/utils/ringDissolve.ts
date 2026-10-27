@@ -178,13 +178,7 @@ export const animateRingDissolve = (options: {
   onPhaseChange?: (phase: "dissolving" | "revealing") => void;
   reducedMotion?: boolean;
 }): RingDissolveTransition => {
-  if (options.reducedMotion) {
-    options.onSwap();
-    options.onVisibilityChange?.(1);
-    options.onUpdate();
-    return { finished: Promise.resolve(true), cancel: () => {} };
-  }
-
+  const timing = options.reducedMotion ? RING_DISSOLVE.reducedMotion : RING_DISSOLVE;
   const outgoing = options.outgoing.filter(Boolean).map(prepareRingDissolve);
   const incoming = options.incoming.filter(Boolean).map(prepareRingDissolve);
   prepareDepthDissolve(options.depthMaterial);
@@ -203,7 +197,8 @@ export const animateRingDissolve = (options: {
     rejectFinished = reject;
   });
   let frame = 0;
-  let start: number | undefined;
+  let previousFrame: number | undefined;
+  let elapsedMilliseconds = 0;
   let swapped = false;
   let settled = false;
   const finish = (completed: boolean, error?: unknown) => {
@@ -218,12 +213,15 @@ export const animateRingDissolve = (options: {
   };
   const tick = (now: number) => {
     if (settled) return;
-    start ??= now;
-    const elapsed = (now - start) / 1000;
-    const revealStart = RING_DISSOLVE.dissolveDuration + RING_DISSOLVE.pauseDuration;
+    // Shader compilation or a busy laptop must not consume the entire transition
+    // between two visible frames. Advance by a bounded amount of visible time.
+    elapsedMilliseconds += Math.min(Math.max(0, now - (previousFrame ?? now)), RING_DISSOLVE.maxFrameDuration * 1000);
+    previousFrame = now;
+    const elapsed = elapsedMilliseconds / 1000;
+    const revealStart = timing.dissolveDuration + timing.pauseDuration;
     try {
       if (!swapped) {
-        const progress = smoothstep(elapsed / RING_DISSOLVE.dissolveDuration);
+        const progress = smoothstep(elapsed / timing.dissolveDuration);
         outgoing.forEach((state) => {
           state.progress.value = progress;
         });
@@ -235,14 +233,14 @@ export const animateRingDissolve = (options: {
         }
       }
       if (swapped) {
-        const visibility = smoothstep((elapsed - revealStart) / RING_DISSOLVE.revealDuration);
+        const visibility = smoothstep((elapsed - revealStart) / timing.revealDuration);
         incoming.forEach((state) => {
           state.progress.value = 1 - visibility;
         });
         options.onVisibilityChange?.(visibility);
       }
       options.onUpdate();
-      if (elapsed >= revealStart + RING_DISSOLVE.revealDuration) finish(true);
+      if (elapsed >= revealStart + timing.revealDuration) finish(true);
       else frame = requestAnimationFrame(tick);
     } catch (error) {
       finish(false, error);

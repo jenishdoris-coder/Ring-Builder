@@ -49,7 +49,7 @@ root.add(new Mesh(new BoxGeometry(3, 1, 5), new MeshBasicMaterial()));
 root.rotation.set(Math.PI / 2, Math.PI, -1.22);
 root.position.set(1, -0.35, 2);
 const rootPose = { position: root.position.toArray(), quaternion: root.quaternion.toArray(), scale: root.scale.toArray() };
-const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION, mobileAA = false) => {
+const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION, mobileAA = false, renderScale = 2) => {
   const activeCamera = { position: new Vector3(3, 4, 8), target: new Vector3(0, 1, 0) };
   const progressive = { enabled: true, jitter: true };
   const floorMaterial = new MeshBasicMaterial({ opacity: 0.7, alphaMap: new Texture() });
@@ -61,10 +61,10 @@ const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION, mobile
   const poses = [];
   const projections = [];
   const viewer = {
-    scene: { activeCamera, renderCamera: activeCamera }, canvas: { width: 800, height: 800 }, renderEnabled: true,
+    scene: { activeCamera, renderCamera: activeCamera }, canvas: { width: 400 * renderScale, height: 400 * renderScale }, renderEnabled: true,
     getPluginByType: type => type === "Progressive" ? progressive : type === "TAA" ? { enabled: mobileAA } : type === "ContactShadowGroundPlugin" ? ground : undefined, setDirty() {}, dispatchEvent() {},
     renderer: {
-      defaultRenderToScreen: true, renderSize: { x: 400, y: 400 }, displayCanvasScaling: 2,
+      defaultRenderToScreen: true, renderSize: { x: 400, y: 400 }, displayCanvasScaling: renderScale,
       composer: { readBuffer: {} }, reset() {},
       setSize(width, height) {
         this.renderSize.x = width; this.renderSize.y = height;
@@ -76,6 +76,8 @@ const makeViewer = (expectedResolution = preview.RING_PREVIEW_RESOLUTION, mobile
         assert.equal(viewer.renderEnabled, false);
         assert.equal(viewer.scene.activeCamera, activeCamera);
         assert.notEqual(viewer.scene.renderCamera, activeCamera);
+        assert.equal(viewer.scene.renderCamera.near, viewer.scene.renderCamera.cameraObject.near, "WebGI depth uniforms and the photo projection use the same near plane");
+        assert.equal(viewer.scene.renderCamera.far, viewer.scene.renderCamera.cameraObject.far, "WebGI depth uniforms and the photo projection use the same far plane");
         assert.equal(viewer.canvas.width, expectedResolution, "photos are rendered at full resolution rather than enlarged from the gallery tile");
         assert.equal(viewer.canvas.height, expectedResolution);
         assert.equal(progressive.enabled, expectedResolution > preview.RING_PREVIEW_RESOLUTION || mobileAA);
@@ -156,6 +158,11 @@ const mobilePhoto = makeViewer(1200, true);
 await preview.captureRingPreviews(mobilePhoto.viewer, [root], new AbortController().signal, { viewId: "profile" });
 assert.equal(mobilePhoto.count(), 4, "mobile gallery images receive edge smoothing without increasing their 1200px size");
 mobilePhoto.checkRestored();
+const expandedViewer = makeViewer(1200, true, 1.6);
+const [expandedPhoto] = await preview.captureRingPreviews(expandedViewer.viewer, [root], new AbortController().signal, { viewId: "profile" });
+assert.equal(expandedPhoto.width, 1200, "lower fullscreen canvas density does not lower photo resolution");
+assert.equal(expandedViewer.viewer.renderer.displayCanvasScaling, 1.6);
+expandedViewer.checkRestored();
 
 const cancelled = makeViewer();
 const controller = new AbortController();

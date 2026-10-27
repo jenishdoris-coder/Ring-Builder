@@ -72,10 +72,29 @@ assert.equal(renderer.cameraPose(camera), undefined);
 assert.equal(renderer.apply(new Group(), { text: "Forever", position: "bottom" }), "unavailable", "missing surfaces fail without floating text");
 renderer.dispose();
 
+// Separate thin rows must not share one wide inscription across their gaps.
+const rows = new Group();
+for (const [y, thickness] of [[-.6, .22], [0, .11], [.6, .22]]) {
+  const row = new Mesh(new TorusGeometry(10, thickness, 24, 96), new MeshStandardMaterial());
+  row.rotation.x = Math.PI / 2;
+  row.position.y = y;
+  rows.add(row);
+}
+prepareMaterials(rows);
+const rowEngraving = new RingEngraving();
+for (const position of ENGRAVING_POSITIONS) {
+  assert.equal(rowEngraving.apply(rows, { text: "hkhu987", position: position.id }), "ready");
+  const fitted = rows.children[0].material.materialExtensions[0].extraUniforms.uRingEngravingLayout.value;
+  const closest = [-.6, 0, .6].sort((a, b) => Math.abs(fitted.w - a) - Math.abs(fitted.w - b))[0];
+  const thickness = closest === 0 ? .11 : .22;
+  assert.ok(Math.abs(fitted.w - closest) + fitted.z * .4 < thickness, "all letter strokes stay on one solid metal row");
+}
+rowEngraving.dispose();
+
 const multi = new MultiRingEngraving();
 const inscriptions = [{ position: "bottom", text: "Forever" }, { position: "left", text: "Love" }, { position: "right", text: "26.10.2026" }];
 assert.equal(multi.apply(root, inscriptions), "ready");
-const channels = metal.materialExtensions.filter(item => /ring-inner-engraving-v1.+/.test(item.customCacheKey));
+const channels = metal.materialExtensions.filter(item => /ring-inner-engraving-v\d+.+/.test(item.customCacheKey));
 assert.equal(channels.length, 3, "all three inscriptions coexist on the same material");
 const shader = { vertexShader: "void main() { }", fragmentShader: "void main() {\n#include <color_fragment>\n#include <roughnessmap_fragment>\n#include <normal_fragment_maps>\n}" };
 channels.forEach(extension => extension.shaderExtender(shader));

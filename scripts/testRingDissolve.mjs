@@ -29,10 +29,16 @@ globalThis.requestAnimationFrame = (callback) => {
   return nextFrameId;
 };
 globalThis.cancelAnimationFrame = (id) => frames.delete(id);
-const step = (time) => {
+const stepOneFrame = (time) => {
   const scheduled = [...frames.values()];
   frames.clear();
   scheduled.forEach((callback) => callback(time));
+};
+let lastStep = 0;
+const step = (time) => {
+  for (let frameTime = lastStep + 16; frameTime < time; frameTime += 16) stepOneFrame(frameTime);
+  stepOneFrame(time);
+  lastStep = time;
 };
 const makeMaterial = () => {
   const material = new MeshPhysicalMaterial({ metalness: 1, roughness: 0.08 });
@@ -157,9 +163,28 @@ for (const cancelAfterSwap of [false, true]) {
 assert.equal(depthMaterial.materialExtensions.length, 1, "depth extension is installed once");
 
 const reduced = play({ reducedMotion: true });
+step(0);
+step(140);
+assert.equal(oldState.progress.value, 0.5, "reduced motion keeps a shorter stationary dissolve instead of an instant swap");
+step(310);
+step(490);
+assert.ok(Math.abs(newState.progress.value - 0.5) < 1e-9, "the reduced-motion reveal remains visible");
+step(680);
 assert.equal(await reduced.finished, true);
 assert.equal(shadowVisibility, 1);
-assert.equal(frames.size, 0, "reduced motion swaps without animation");
+assert.equal(frames.size, 0, "the shorter reduced-motion transition completes");
+
+const slowLaptop = play();
+stepOneFrame(0);
+stepOneFrame(1800);
+assert.ok(oldState.progress.value > 0 && oldState.progress.value < 0.1, "a long frame cannot skip the outgoing dissolve");
+assert.equal(newState.progress.value, 1, "the incoming ring stays hidden during a delayed outgoing frame");
+for (let time = 1816; time <= 2440; time += 16) stepOneFrame(time);
+stepOneFrame(5000);
+assert.ok(newState.progress.value > 0.8, "shader stalls at the swap cannot skip the incoming reveal");
+for (let time = 5016; time <= 5900; time += 16) stepOneFrame(time);
+assert.equal(await slowLaptop.finished, true);
+assert.equal(frames.size, 0);
 
 // The unchanged head/shank must dissolve and reveal with the changed part.
 const sharedState = prepareRingDissolve(unchangedPart.root);

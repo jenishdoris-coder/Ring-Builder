@@ -9,18 +9,19 @@ const clamp = (value: number, minimum: number, maximum: number) => Math.max(mini
 const midpoint = (points: Point[]) => ({ x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 });
 const distance = (points: Point[]) => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
 const originTransform = (origin: ImageOrigin, frame: DOMRect) => `translate3d(${origin.left + origin.width / 2 - frame.left - frame.width / 2}px, ${origin.top + origin.height / 2 - frame.top - frame.height / 2}px, 0) scale(${origin.width / frame.width}, ${origin.height / frame.height})`;
-const imageMotionFrames = (origin: ImageOrigin, frame: DOMRect, reverse = false): Keyframe[] => {
+const imageMotionFrames = (origin: ImageOrigin, frame: DOMRect, reverse = false, fillWidth = false): Keyframe[] => {
   const initialX = origin.width / frame.width, initialY = origin.height / frame.height;
-  const fit = Math.min(frame.width, frame.height);
+  const fit = fillWidth ? frame.width : Math.min(frame.width, frame.height);
   return Array.from({ length: 21 }, (_, index) => {
     const progress = reverse ? 1 - index / 20 : index / 20;
     const x = initialX + (1 - initialX) * progress, y = initialY + (1 - initialY) * progress;
-    const size = Math.min(frame.width * x, frame.height * y);
+    const size = fillWidth ? frame.width * x : Math.min(frame.width * x, frame.height * y);
     return { transform: `scale(${size / (fit * x)}, ${size / (fit * y)})`, offset: index / 20 };
   });
 };
 
 export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpened, onClosing }: { image: RingPreviewImage; origin: ImageOrigin; enhancing?: boolean; onClose: () => void; onOpened: () => void; onClosing: () => void }) => {
+  const fillWidth = image.id === "engraving";
   const overlayRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -49,19 +50,19 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
     const motion = frame.animate([{ transform: current }, { transform: originTransform(origin, bounds), borderRadius: "5px" }], { duration: 260, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
     motionRef.current = motion;
     if (imageRef.current) {
-      const frames = imageMotionFrames(origin, bounds, true);
+      const frames = imageMotionFrames(origin, bounds, true, fillWidth);
       if (currentImage) frames[0] = { ...frames[0], transform: currentImage };
       imageMotionRef.current = imageRef.current.animate(frames, { duration: 260, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
     }
     overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: "ease-in", fill: "forwards" });
     void motion.finished.then(onClose).catch(() => {});
-  }, [origin, onClose, onClosing]);
+  }, [origin, onClose, onClosing, fillWidth]);
 
   const update = (next: ImageTransform) => {
     const bounds = viewportRef.current?.getBoundingClientRect();
     if (!bounds) return;
     const ratio = imageRef.current?.naturalWidth && imageRef.current?.naturalHeight ? imageRef.current.naturalWidth / imageRef.current.naturalHeight : 1;
-    const fitHeight = Math.min(bounds.height, bounds.width / ratio);
+    const fitHeight = fillWidth ? bounds.width / ratio : Math.min(bounds.height, bounds.width / ratio);
     const scale = clamp(next.scale, 1, 3);
     const maxX = Math.max(0, (fitHeight * ratio * scale - bounds.width) / 2);
     const maxY = Math.max(0, (fitHeight * scale - bounds.height) / 2);
@@ -126,11 +127,11 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
     finalBoundsRef.current = bounds;
     const motion = frame.animate([{ transform: originTransform(origin, bounds), borderRadius: "5px" }, { transform: "translate3d(0,0,0) scale(1)", borderRadius: getComputedStyle(frame).borderRadius }], { duration: 360, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
     motionRef.current = motion;
-    imageMotionRef.current = imageRef.current?.animate(imageMotionFrames(origin, bounds), { duration: 360, easing: "cubic-bezier(.2,.8,.2,1)" }) ?? null;
+    imageMotionRef.current = imageRef.current?.animate(imageMotionFrames(origin, bounds, false, fillWidth), { duration: 360, easing: "cubic-bezier(.2,.8,.2,1)" }) ?? null;
     const fade = overlay.animate([{ opacity: .1 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
     void motion.finished.then(() => { if (!closingRef.current) onOpened(); }).catch(() => {});
     return () => { motion.cancel(); imageMotionRef.current?.cancel(); fade.cancel(); };
-  }, [origin, onOpened]);
+  }, [origin, onOpened, fillWidth]);
 
   const pointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (closingRef.current || event.button !== 0 || pointers.current.size >= 2) return;
@@ -174,7 +175,7 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
 
   return <div ref={overlayRef} className="product-image-lightbox" role="dialog" aria-modal="true" aria-label={image.label} onClick={event => { if (event.target === event.currentTarget) requestClose(); }}>
     <div ref={frameRef} className="product-image-frame">
-      <div ref={viewportRef} className={`product-image-viewport ${transform.scale > 1 ? "is-zoomed" : ""} ${dragging ? "is-dragging" : ""}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onLostPointerCapture={pointerUp}
+      <div ref={viewportRef} className={`product-image-viewport ${fillWidth ? "is-engraving" : ""} ${transform.scale > 1 ? "is-zoomed" : ""} ${dragging ? "is-dragging" : ""}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onLostPointerCapture={pointerUp}
         onDoubleClick={event => { const bounds = event.currentTarget.getBoundingClientRect(); zoomAt(transformRef.current.scale > 1 ? 1 : 2, { x: event.clientX - bounds.left - bounds.width / 2, y: event.clientY - bounds.top - bounds.height / 2 }); }}>
         <img ref={imageRef} src={image.url} alt={image.label} draggable={false} onLoad={() => update(transformRef.current)} style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }} />
       </div>

@@ -42,3 +42,28 @@ export const holdViewerFrame = async (viewer: any, canvas: HTMLCanvasElement): P
 export const clearViewerFrames = (canvas: HTMLCanvasElement | null) => {
   canvas?.parentElement?.querySelectorAll("img[data-camera-frame]").forEach(image => image.remove());
 };
+
+/** A completed animation can still have its penultimate pixels on the canvas. */
+export const waitForCompleteRingFrame = (viewer: any, isCurrent: () => boolean): Promise<boolean> => {
+  if (!isCurrent()) return Promise.resolve(false);
+  // Discard temporal history containing the last partially dissolved ring.
+  viewer.getPluginByType?.("TAA")?.pass?.passObject?.onSizeUpdate?.();
+  return new Promise(resolve => {
+    let remaining = 2;
+    const finish = (complete: boolean) => {
+      viewer.removeEventListener("postRender", rendered);
+      viewer.removeEventListener("dispose", disposed);
+      resolve(complete);
+    };
+    const disposed = () => finish(false);
+    const rendered = () => {
+      if (!isCurrent()) return finish(false);
+      if (viewer.scene.renderCamera !== viewer.scene.activeCamera) return;
+      if (--remaining === 0) finish(true);
+      else viewer.setDirty();
+    };
+    viewer.addEventListener("postRender", rendered);
+    viewer.addEventListener("dispose", disposed);
+    viewer.setDirty();
+  });
+};

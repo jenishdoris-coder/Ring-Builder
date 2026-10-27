@@ -46,6 +46,7 @@ import { assetUrl } from "../../config/assets";
 import {
   PROGRESSIVE_PLUGIN_SAMPLES,
   DISPLAY_CANVAS_SCALING,
+  FULLSCREEN_RENDER_SCALE,
   TONEMAP_CONTRAST,
   TONEMAP_SATURATION,
   TEMPORAL_AA_ENABLED,
@@ -126,7 +127,8 @@ import { HandPreview } from "../../utils/handPreview";
 import { MultiRingEngraving as RingEngraving } from "../../utils/ringEngraving";
 import type { EngravingPosition, EngravingStatus, RingEngravingConfig } from "../../config/engraving";
 import { DEFAULT_SKIN_TONE } from "../../config/skinTones";
-import { holdViewerFrame, clearViewerFrames } from "../../utils/viewerFrame";
+import { holdViewerFrame, clearViewerFrames, waitForCompleteRingFrame } from "../../utils/viewerFrame";
+import { DampedRingZoom } from "../../utils/ringZoom";
 
 // Types
 import type { PartLoadType, PartMeshCaches } from "../../types/ring.types";
@@ -220,6 +222,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const [partTransitionPhase, setPartTransitionPhase] = useState("idle");
   const activeCameraRef = useRef<any>(null);
   const cameraTweenRef = useRef<gsap.core.Tween | null>(null);
+  const zoomRef = useRef(new DampedRingZoom());
   const pendingCameraViewRef = useRef<string | null>(null);
   const handPreviewRef = useRef<HandPreview | null>(null);
   const engravingRef = useRef<RingEngraving | null>(null);
@@ -418,6 +421,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
   const setViewerControlsEnabled = useCallback((enabled: boolean) => {
     viewerInputLockedRef.current = !enabled;
+    if (!enabled) zoomRef.current.stop();
 
     const camera =
       activeCameraRef.current ?? viewerRef.current?.scene?.activeCamera;
@@ -499,7 +503,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     handPreviewRef.current?.suspend();
     try {
       const position = engravingPhotoPositionRef.current;
-      const images = await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal, { engraving: engraving && { position, cameraPose: camera => engraving.cameraPose(camera, position) } });
+      const images = await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal, { engraving: engraving && { position, cameraPose: camera => engraving.cameraPose(camera, position, "photo") } });
       if (!controller.signal.aborted && viewer === viewerRef.current && key === previewRequestRef.current.key && images.length === 3) {
         if (previewCacheRef.current.size >= 6) previewCacheRef.current.delete(previewCacheRef.current.keys().next().value!);
         previewCacheRef.current.set(key, images);
@@ -1457,11 +1461,12 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             });
             await runFullRingDiamondRefresh({ restoreHeadShankVisibility: false });
             applyFinalRingVisibility();
-            await initializeRingCameraRef.current?.();
             getRingRoots().forEach(prepareRingDissolve);
-            revealViewerAfterFirstLoad();
             viewer.renderer?.refreshPipeline?.();
             viewer.setDirty?.();
+            await initializeRingCameraRef.current?.();
+            if (loadId !== loadIdRef.current || viewer !== viewerRef.current) return;
+            revealViewerAfterFirstLoad();
             console.log("Load complete — metal and diamond materials applied, viewer revealed");
           } else if (headShankSwapPrepared) {
             await runFullRingDiamondRefresh({ restoreHeadShankVisibility: false });
@@ -1501,6 +1506,10 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             }
             viewer.renderer?.refreshPipeline?.();
             viewer.setDirty?.();
+            // The photo guard must save pixels rendered with dissolve = 0,
+            // not the last displayed animation frame with small gaps remaining.
+            const completeFrame = await waitForCompleteRingFrame(viewer, () => loadId === loadIdRef.current && viewer === viewerRef.current);
+            if (!completeFrame) return;
             console.log("Load complete — head/shank dissolve transition");
           } else {
             await runFullRingDiamondRefresh();
@@ -1591,12 +1600,17 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       const renderer = viewerAny.renderer;
       const isMobileDevice =
         mobileAndTabletCheck?.() || window.innerWidth <= 768;
-      const renderScale = isMobileDevice ? Math.min(2, Math.max(DISPLAY_CANVAS_SCALING, window.devicePixelRatio || 1)) : 2;
-      if (renderer && typeof renderer.renderScale !== "undefined") {
-        renderer.renderScale = renderScale;
-      } else if (renderer && typeof renderer.displayCanvasScaling !== "undefined") {
-        renderer.displayCanvasScaling = renderScale;
-      }
+      const baseRenderScale = isMobileDevice ? Math.min(2, Math.max(DISPLAY_CANVAS_SCALING, window.devicePixelRatio || 1)) : 2;
+      const syncCanvasRenderScale = () => {
+        const expanded = canvasRef.current?.closest(".product-viewer-stage")?.classList.contains("is-expanded");
+        const renderScale = expanded ? Math.min(baseRenderScale, FULLSCREEN_RENDER_SCALE) : baseRenderScale;
+        if (renderer && typeof renderer.renderScale !== "undefined") {
+          if (renderer.renderScale !== renderScale) renderer.renderScale = renderScale;
+        } else if (renderer && typeof renderer.displayCanvasScaling !== "undefined") {
+          if (renderer.displayCanvasScaling !== renderScale) renderer.displayCanvasScaling = renderScale;
+        }
+      };
+      syncCanvasRenderScale();
 
       const lutPlugin = viewerAny.getPlugin(LUTPlugin);
       if (lutPlugin) await viewerAny.removePlugin(lutPlugin);
@@ -1606,6 +1620,15 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
       const loadingScreenPlugin: any = viewerAny.getPlugin(LoadingScreenPlugin);
       if (loadingScreenPlugin) loadingScreenPlugin.showFileNames = false;
+
+      // Product transitions already have frame guards and a whole-ring dissolve.
+      // The renderer's automatic fade blends the unlit startup frame into the
+      // finished materials, making the ring change brightness after reveal.
+      const frameFadePlugin = viewerAny.getPluginByType?.("FrameFade");
+      if (frameFadePlugin) {
+        frameFadePlugin.stopTransition?.();
+        await viewerAny.removePlugin(frameFadePlugin);
+      }
 
       const depthOfFieldPlugin: any = viewerAny.getPlugin(DepthOfFieldPlugin);
       if (depthOfFieldPlugin) depthOfFieldPlugin.enabled = false;
@@ -1799,6 +1822,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       let alignedOrbitModule: typeof import("three/examples/jsm/controls/OrbitControls.js") | undefined;
       const applyPresetCameraView = async (name: string, initial = false) => {
         const requestId = ++cameraRequestRef.current;
+        zoomRef.current.stop();
         const activeCamera = viewerRef.current?.scene?.activeCamera as any;
         const viewer = viewerRef.current;
         if (!activeCamera?.position) return false;
@@ -1868,7 +1892,16 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
                 const delta = Math.min(0.05, Math.max(0, (now - lastUpdate) / 1000));
                 lastUpdate = now;
                 object.up.copy(desiredUp);
-                return orbit.enabled ? update(delta) : false;
+                if (!orbit.enabled) { zoomRef.current.stop(); return false; }
+                const zoomed = zoomRef.current.advance(object, orbit, delta);
+                const changed = update(delta);
+                if (zoomed) {
+                  activeCamera.target.copy(orbit.target);
+                  activeCamera.positionUpdated?.(false);
+                  activeCamera.targetUpdated?.(false);
+                  viewer.setDirty?.();
+                }
+                return changed || zoomed;
               };
               return orbit;
             }, true);
@@ -2060,10 +2093,6 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         cleanupStack.push(() => cancelAnimationFrame(autoRotateFrameId));
       }
 
-      const isMobile = window.innerWidth <= 768;
-      const CONTROL_MIN_DISTANCE = isMobile ? CAMERA_MIN_DISTANCE_MOBILE : CAMERA_MIN_DISTANCE_DESKTOP;
-      const CONTROL_MAX_DISTANCE = isMobile ? CAMERA_MAX_DISTANCE_MOBILE : CAMERA_MAX_DISTANCE_DESKTOP;
-      const EPS = 0.01;
       const canvasEl = canvasRef.current;
       if (canvasEl) {
         const cancelCameraTransition = () => {
@@ -2079,28 +2108,17 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             return;
           }
           cancelCameraTransition();
-          try {
-            const ctrl: any = cameraView?.controls;
-            const tgt = (ctrl && (ctrl.target || ctrl._target)) || {
-              x: 0,
-              y: 0,
-              z: 0,
-            };
-            const dx = cameraView.position.x - tgt.x;
-            const dy = cameraView.position.y - tgt.y;
-            const dz = cameraView.position.z - tgt.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (ev.deltaY < 0 && dist <= (ctrl?.minDistance ?? CONTROL_MIN_DISTANCE) + EPS) {
-              ev.preventDefault();
-              ev.stopImmediatePropagation();
-              return;
-            }
-            if (ev.deltaY > 0 && dist >= (ctrl?.maxDistance ?? CONTROL_MAX_DISTANCE) - EPS) {
-              ev.preventDefault();
-              ev.stopImmediatePropagation();
-              return;
-            }
-          } catch (e) {}
+          const ctrl: any = cameraView?.controls;
+          const object = cameraView?.cameraObject ?? cameraView;
+          const bounds = canvasEl.getBoundingClientRect();
+          const unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? bounds.height : 1;
+          const delta = ev.deltaY * unit * (ev.ctrlKey ? 10 : 1);
+          const cursor = { x: (ev.clientX - bounds.left) / bounds.width * 2 - 1, y: -(ev.clientY - bounds.top) / bounds.height * 2 + 1 };
+          if (zoomRef.current.add(delta, object, ctrl, cursor)) {
+            ev.preventDefault();
+            ev.stopImmediatePropagation();
+            viewer.setDirty?.();
+          }
         };
         canvasEl.addEventListener("wheel", wheelHandler, {
           passive: false,
@@ -2118,6 +2136,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             return;
           }
           cancelCameraTransition();
+          zoomRef.current.stop();
           if (e.button === 2 && !handPreviewRef.current?.active) {
             rightBtnDown = true;
             e.preventDefault();
@@ -2162,14 +2181,22 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         });
 
         if (typeof ResizeObserver !== "undefined") {
-          const ro = new ResizeObserver(() => {
+          let resizeFrame: number | undefined;
+          const resizeViewer = () => {
+            if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);
+            resizeFrame = undefined;
+            if (viewerRef.current !== viewer) return;
+            // Finish fixed-resolution photos before changing the live scale.
+            if (previewCaptureRef.current) { resizeFrame = requestAnimationFrame(resizeViewer); return; }
             try {
-              viewer?.resize?.();
-              viewer?.setDirty?.();
+              syncCanvasRenderScale();
+              viewer.resize?.();
+              viewer.setDirty?.();
             } catch (e) {}
-          });
+          };
+          const ro = new ResizeObserver(resizeViewer);
           ro.observe(canvasEl);
-          cleanupStack.push(() => ro.disconnect());
+          cleanupStack.push(() => { ro.disconnect(); if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame); });
         }
       }
 
@@ -2287,6 +2314,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
     return () => {
       isMounted = false;
+      zoomRef.current.stop();
       previewCaptureRef.current?.abort();
       engravingRef.current?.dispose();
       engravingRef.current = null;
@@ -2454,7 +2482,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       try {
         const roots = [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible);
         const engraving = engravingRef.current;
-        const [image] = await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition) } : undefined });
+        const [image] = await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition, "photo") } : undefined });
         if (!controller.signal.aborted && viewerRef.current === viewer) {
           if (image) {
             if (detailPreviewCacheRef.current.size >= 3) detailPreviewCacheRef.current.delete(detailPreviewCacheRef.current.keys().next().value!);

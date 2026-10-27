@@ -119,11 +119,11 @@ export const App = () => {
               detailPreviewRequest={detailRequest} onDetailPreviewChange={handleDetailPreview} />
             </ViewerStage>
           </figure>
-          {getRingPreviewViews(engraving.length > 0 && engravingStatus !== "unavailable").map((view, index) => {
+          {getRingPreviewViews(engraving.length > 0 && engravingStatus !== "unavailable").map(view => {
             const image = view.id === "engraving" ? selectedEngravingPhoto : previews?.images.find(item => item.id === view.id);
-            return <figure key={view.id} className={`product-gallery-tile product-photo-tile ${currentPreviews ? "" : "is-refreshing"}`} aria-busy={!currentPreviews || isModelLoading || (view.id === "engraving" && !image && !photoFailed)}>
+            return <figure key={view.id} className={`product-gallery-tile product-photo-tile ${view.id === "engraving" ? "is-engraving" : ""} ${currentPreviews ? "" : "is-refreshing"}`} aria-busy={!currentPreviews || isModelLoading || (view.id === "engraving" && !image && !photoFailed)}>
               {image ? <button type="button" className="product-photo-button" disabled={!currentPreviews || isModelLoading} onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); setEnlargedView({ key: previewKey, image, resolution: getRingDetailResolution(), pending: true, detailReady: false, closing: false, origin: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } }); }} aria-label={`Enlarge ${view.label.toLowerCase()}`}><img src={image.url} alt={`${currentShape.name} diamond ring, ${view.label.toLowerCase()}`} /><span className="product-expand-icon" aria-hidden="true">⤢</span></button>
-                : <div className="product-photo-placeholder">{view.id === "engraving" ? photoFailed ? <button type="button" onClick={() => setEngravingPhotos(current => { const next = { ...current }; delete next[photoCacheKey]; return next; })}>Retry engraving photo</button> : <small>Preparing engraving view…</small> : <span aria-hidden="true">0{index + 2}</span>}</div>}
+                : <div className="product-photo-placeholder">{view.id === "engraving" && photoFailed ? <button type="button" onClick={() => setEngravingPhotos(current => { const next = { ...current }; delete next[photoCacheKey]; return next; })}>Retry engraving photo</button> : <div className="product-photo-loading" role="status" aria-label={`Preparing ${view.label.toLowerCase()}`}><svg viewBox="0 0 64 72" aria-hidden="true"><circle cx="32" cy="43" r="23" /><circle cx="32" cy="43" r="18" /><path d="m20 14 6-7h12l6 7-12 13Zm0 0h24M26 7l6 20L38 7" /></svg><span>Preparing view</span></div>}</div>}
               {view.id === "engraving" && <EngravingPositionSwitch positions={appliedPositions} selected={photoPosition} onSelect={setEngravingPhotoPosition} location="photo" />}
               <figcaption>{view.label}</figcaption>
             </figure>;

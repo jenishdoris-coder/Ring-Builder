@@ -2,6 +2,7 @@ import { assetUrl } from "./assets";
 
 export const PROGRESSIVE_PLUGIN_SAMPLES = 60;
 export const DISPLAY_CANVAS_SCALING = 1.5;
+export const FULLSCREEN_RENDER_SCALE = 1.6;
 export const TONEMAP_CONTRAST = 1.1;
 export const TONEMAP_SATURATION = 1.05;
 export const TEMPORAL_AA_ENABLED = true;

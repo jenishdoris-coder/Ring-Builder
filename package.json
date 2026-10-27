@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:host": "vite --host",
+    "screenshots:inbox": "node scripts/screenshot-inbox.mjs",
     "build": "node scripts/build.mjs",
     "test:animation": "node scripts/testRingDissolve.mjs && node scripts/testRingAssembly.mjs",
+    "test:motion": "node scripts/testViewerMotion.mjs",
     "test:gallery": "node scripts/testRingPreview.mjs",
     "test:engraving": "node scripts/testRingEngraving.mjs",
     "preview": "vite preview",

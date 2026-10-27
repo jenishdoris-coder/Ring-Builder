@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Screenshot Inbox</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f6f8; color: #202b43; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+    main { width: min(760px, 100% - 36px); margin: 52px auto; }
+    header { margin-bottom: 26px; }
+    .eyebrow { color: #8c7857; text-transform: uppercase; letter-spacing: 2px; font-size: 10px; font-weight: 600; }
+    h1 { font-size: clamp(26px, 5vw, 34px); font-weight: 600; letter-spacing: -.8px; margin: 7px 0; }
+    p { color: #747c8c; margin: 0; }
+    .panel { padding: 24px; border: 1px solid #e2e5eb; border-radius: 20px; background: white; box-shadow: 0 8px 30px #1d294707; }
+    .drop { text-align: center; padding: 32px 18px; border: 1.5px dashed #cdd3de; border-radius: 13px; background: #fbfcfe; transition: background .15s, border-color .15s; }
+    .drop.dragging { background: #edf1f8; border-color: #203457; }
+    .drop svg { width: 37px; height: 37px; fill: none; stroke: #344663; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 10px; }
+    .drop strong { display: block; font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+    .drop p { font-size: 13px; }
+    button { font: inherit; cursor: pointer; border: 1px solid #dce1e9; border-radius: 9px; background: white; color: #243451; padding: 9px 14px; }
+    .primary { background: #1d2947; color: white; border-color: #1d2947; margin-top: 18px; padding: 10px 22px; }
+    button:hover { filter: brightness(.96); }
+    button:focus-visible, textarea:focus-visible { outline: 2px solid #ad936b; outline-offset: 3px; }
+    label { display: block; font-size: 12px; margin: 19px 0 7px; color: #626d80; }
+    textarea { width: 100%; resize: vertical; min-height: 73px; padding: 11px 13px; font: inherit; font-size: 13px; border: 1px solid #dce1e9; border-radius: 9px; color: #26344d; }
+    textarea::placeholder { color: #a0a6b1; }
+    #status { margin-top: 15px; font-size: 13px; color: #327052; overflow-wrap: anywhere; }
+    #status:empty { display: none; }
+    #status.error { color: #af3f3f; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin: 27px 0 12px; }
+    h2 { font-size: 14px; font-weight: 600; margin: 0; }
+    .section-title button { font-size: 12px; padding: 6px 10px; }
+    #files { display: grid; gap: 12px; }
+    .file { display: flex; gap: 15px; align-items: flex-start; border: 1px solid #e2e5eb; background: white; border-radius: 13px; padding: 13px; }
+    .file img { display: block; width: 90px; height: 90px; object-fit: contain; background: #f8f9fb; border-radius: 7px; }
+    .file-info { min-width: 0; flex: 1; }
+    .file-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .file small { color: #8b929f; font-size: 11px; }
+    .file-note { white-space: pre-wrap; font-size: 13px; margin: 5px 0; color: #566277; }
+    details { margin-top: 7px; font-size: 11px; color: #858e9e; }
+    details p { font-size: 10px; overflow-wrap: anywhere; user-select: all; margin-top: 5px; }
+    .footnote { margin-top: 17px; font-size: 12px; }
+    .empty { padding: 22px; text-align: center; border: 1px solid #e2e5eb; border-radius: 13px; color: #8d95a4; font-size: 13px; }
+    @media(max-width: 500px) { main { margin: 25px auto; } .panel { padding: 17px; } .drop { padding: 25px 12px; } .file img { width: 65px; height: 75px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><div class="eyebrow">Ring Builder · Local workspace</div><h1>Screenshot Inbox</h1><p>Send screenshots straight to your PC project folder.</p></header>
+    <section class="panel" aria-label="Upload screenshots">
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 22V5m-6 6 6-6 6 6M6 19v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-7" /></svg>
+        <strong>Drop your screenshots here</strong><p>or paste with Ctrl + V · PNG, JPG, WebP, GIF · up to 20 MB each</p>
+        <button class="primary" id="choose" type="button">Choose screenshots</button><input id="picker" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+      </div>
+      <label for="note">What should I look at? <span>(optional)</span></label>
+      <textarea id="note" maxlength="2000" placeholder="For example: the ring looks too bright when the page first opens."></textarea>
+      <div id="status" role="status" aria-live="polite"></div>
+    </section>
+    <div class="section-title"><h2>Received in this workspace</h2><button id="refresh" type="button">Refresh</button></div>
+    <div id="files"></div>
+    <p class="footnote">After uploading, tell me “check the latest screenshot” in our chat.</p>
+  </main>
+  <script type="module">
+    const $ = id => document.getElementById(id);
+    const base = location.pathname;
+    let queue = Promise.resolve();
+    const showStatus = (text, error = false) => { $('status').textContent = text; $('status').classList.toggle('error', error); };
+    const refresh = async () => {
+      const response = await fetch(base + 'files', {cache: 'no-store'});
+      if (!response.ok) throw new Error('Cannot reach your PC. Check the inbox is still running.');
+      const {items} = await response.json();
+      $('files').replaceChildren();
+      if (!items.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = 'Your screenshots will appear here after uploading.'; $('files').append(empty); }
+      for (const item of items) {
+        const card = document.createElement('article'); card.className = 'file';
+        const link = document.createElement('a'); link.href = base + 'image/' + encodeURIComponent(item.filename); link.target = '_blank'; link.rel = 'noopener';
+        const image = document.createElement('img'); image.src = link.href; image.alt = item.originalName; image.loading = 'lazy'; link.append(image);
+        const info = document.createElement('div'); info.className = 'file-info';
+        const name = document.createElement('div'); name.className = 'file-name'; name.textContent = item.originalName;
+        const date = document.createElement('small'); date.textContent = new Date(item.uploadedAt).toLocaleString() + ' · ' + Math.max(1, Math.round(item.bytes / 1024)) + ' KB';
+        info.append(name, date);
+        if (item.note) { const note = document.createElement('p'); note.className = 'file-note'; note.textContent = item.note; info.append(note); }
+        const detail = document.createElement('details'); const summary = document.createElement('summary'); summary.textContent = 'Saved in workspace'; const path = document.createElement('p'); path.textContent = item.path; detail.append(summary, path); info.append(detail);
+        card.append(link, info); $('files').append(card);
+      }
+    };
+    const upload = files => {
+      const note = $('note').value;
+      for (const file of files) {
+        queue = queue.catch(() => {}).then(async () => {
+          if (file.size > 20 * 1024 * 1024) throw new Error(file.name + ': choose an image smaller than 20 MB.');
+          showStatus('Sending ' + file.name + '…');
+          const response = await fetch(base + 'upload', {method: 'POST', headers: {'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name), 'X-Screenshot-Note': encodeURIComponent(note)}, body: file});
+          const item = await response.json(); if (!response.ok) throw new Error(item.error);
+          showStatus('Saved to your PC: ' + item.originalName); await refresh();
+        }).catch(error => showStatus(error.message || 'Upload failed. Please try again.', true));
+      }
+    };
+    $('choose').onclick = () => $('picker').click();
+    $('picker').onchange = event => { upload(Array.from(event.target.files)); event.target.value = ''; };
+    $('refresh').onclick = () => refresh().catch(error => showStatus(error.message, true));
+    for (const name of ['dragenter', 'dragover']) $('drop').addEventListener(name, event => { event.preventDefault(); $('drop').classList.add('dragging'); });
+    $('drop').addEventListener('dragleave', () => $('drop').classList.remove('dragging'));
+    $('drop').addEventListener('drop', event => { event.preventDefault(); $('drop').classList.remove('dragging'); upload(Array.from(event.dataTransfer.files)); });
+    window.addEventListener('paste', event => {
+      const files = Array.from(event.clipboardData?.items || []).filter(item => item.kind === 'file').map(item => item.getAsFile()).filter(Boolean);
+      if (files.length) { event.preventDefault(); upload(files); }
+    });
+    refresh().catch(error => showStatus(error.message, true));
+  </script>
+</body>
+</html>

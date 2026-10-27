@@ -32,8 +32,19 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 @media (prefers-reduced-motion: reduce) { .product-photo-loading svg { animation: none; } }
 .product-configurator { padding: 2px 0 0; font-family: var(--product-font); min-width: 0; }
 .product-customization-tabs { display: none; }
+.product-draft-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 28px; background: #edf2f6; color: #4f627c; font: 11px var(--product-font); }
+.product-draft-banner a { color: inherit; white-space: nowrap; }
+.product-draft-banner.has-error { background: #fff1e9; color: #9b6a50; }
+.product-pricing-demo-banner { background: #f4efe4; color: #88734e; line-height: 1.6; }
 .product-customization-panel[hidden] { display: none; }
 .product-heading { padding-bottom: 29px; border-bottom: 1px solid var(--product-line); margin-bottom: 28px; }
+.product-ring-pricing { margin-top: 17px; }
+.product-ring-price strong { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.5px; color: #202b42; }
+.product-price-placeholder { display: inline-block; width: 108px; height: 23px; vertical-align: middle; border-radius: 4px; background: #f0f1f4; }
+.product-ring-price > span { display: block; font-size: 9px; margin-top: 5px; color: #969ca7; }
+.product-ring-size { display: flex; align-items: center; gap: 8px; margin-top: 17px; color: #6c7587; font-size: 11px; }
+.product-ring-size small { font-size: 9px; color: #a2a8b3; }
+.product-ring-size select { border: 1px solid #e0e4eb; padding: 7px 12px; background: #fff; color: #25324c; border-radius: 4px; min-width: 80px; }
 .product-eyebrow { font: 8px var(--product-font); letter-spacing: 2px; text-transform: uppercase; color: #9b8c73; margin-bottom: 14px; }
 .product-heading h1 { font: 500 24px/1.35 var(--product-font); letter-spacing: -.35px; color: #21242d; margin: 0 0 17px; }
 .product-heading h1 > span { font-size: 21px; }

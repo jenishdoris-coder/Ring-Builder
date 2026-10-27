@@ -13,7 +13,7 @@ try {
 } catch (error) { if (error.code !== "ENOENT") throw error; }
 await mkdir(output, { recursive: true });
 
-const roots = ["src", "api", "scripts"];
+const roots = ["src", "api", "server", "scripts"];
 const topFiles = ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vercel.json", "index.html", ".gitignore", ".vercelignore", ".env.example", "README.md", "DEPLOY_VERCEL.md", "THIRD_PARTY_ASSETS.md"];
 const files = [];
 async function collect(directory) {

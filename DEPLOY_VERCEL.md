@@ -24,11 +24,21 @@ Node.js 24 is a [supported Vercel runtime](https://vercel.com/docs/functions/run
 | --- | --- |
 | `MONGODB_URI` | Your existing connection string from the private environment file |
 | `MONGODB_DB` | `ring-builder-saanvi` |
+| `ADMIN_USERNAME` | Existing admin username from local `.env` |
+| `ADMIN_PASSWORD_HASH` | Existing scrypt hash from local `.env` |
+| `ADMIN_SESSION_SECRET` | Existing session signing secret from local `.env` |
+| `CLOUDFLARE_ACCOUNT_ID` | Existing R2 account ID |
+| `CLOUDFLARE_ACCESS_KEY_ID` | Existing R2 access key ID |
+| `CLOUDFLARE_SECRET_ACCESS_KEY` | Existing R2 secret key |
+| `CLOUDFLARE_BUCKET_NAME` | Existing R2 bucket name |
+| `CLOUDFLARE_R2_PUBLIC_URL` | Existing public asset base URL |
 
-Use Vercel's [Environment Variables settings](https://vercel.com/docs/environment-variables/managing-environment-variables) to paste or import the values. Keep the private environment file out of GitHub. `.env.example` contains placeholders and is safe to upload. Cloudflare write keys are only needed for local publishing; public R2 addresses are already configured in the source.
+Use Vercel's [Environment Variables settings](https://vercel.com/docs/environment-variables/managing-environment-variables) to paste or import the values as secrets. The original private export contains the MongoDB variables; copy the additional admin and Cloudflare values from local `.env`. Keep both private files out of GitHub. `.env.example` contains placeholders and is safe to upload. Cloudflare write keys are required on the server for authenticated admin uploads; they are never sent to the storefront. Do not prefix these variables with `VITE_`.
+
+Before using admin uploads, include the production origin (currently `https://ring-builder-lake.vercel.app`) in local `ADMIN_UPLOAD_ORIGINS`, retaining any local development origins, and run `npm run admin:cors`. This preserves public read rules and allows signed uploads from the specified admin origins. See [ADMIN.md](ADMIN.md) for catalog and pricing management. Deploying source code does not publish or overwrite an admin catalog draft.
 
 6. Ensure your MongoDB Atlas project's **Network Access** policy permits connections from Vercel Functions. Atlas uses an [IP access list](https://www.mongodb.com/docs/atlas/security/ip-access-list/). For a restricted list, configure [Vercel Static IPs](https://vercel.com/kb/guide/how-to-allowlist-deployment-ip-address) and add the assigned outbound addresses to Atlas. A working connection from this computer does not establish access from Vercel.
-7. Click **Deploy**. After it finishes, open `https://YOUR-VERCEL-DOMAIN/api/catalog`. It should return JSON containing `schemaVersion: 1`, `shapes`, `shanks` and `metals`. Then open the site, change a head and band, and open an image to check zoom.
+7. Click **Deploy**. After it finishes, open `https://YOUR-VERCEL-DOMAIN/api/catalog`. It should return JSON containing `schemaVersion: 1`, `shapes`, `shanks` and `metals`. Open `/admin` and sign in with your existing admin credentials. The storefront uses `/api/quote` for published prices; private costs and weights stay on the server. Then open the site, change a head and band, and open an image to check zoom.
 8. If `/api/catalog` returns 503, check the two MongoDB variables, the selected environment, Atlas Network Access and the function logs. Redeploy after changing Vercel environment values. The packaged catalog snapshot supports the viewer while the API is unavailable.
 
 The current public asset address uses the configured Cloudflare `r2.dev` hostname. Cloudflare recommends a [custom domain for production traffic](https://developers.cloudflare.com/r2/buckets/public-buckets/). When you attach one to this bucket, update `CLOUDFLARE_R2_PUBLIC_URL` in the local `.env`, run `npm run cloud:sync`, regenerate the upload folder and commit the updated files.

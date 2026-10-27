@@ -6,6 +6,8 @@ The models, lighting environments, diamond icons, static model thumbnails and Dr
 
 See [DEPLOY_VERCEL.md](./DEPLOY_VERCEL.md) for the GitHub drag-and-drop and Vercel deployment steps.
 
+The current-store admin is at `/admin`. It supports catalog drafts, model uploads with one-time thumbnail generation, head setting styles, metals and configurable pricing with USD as the default currency. See [ADMIN.md](./ADMIN.md) for setup, pricing formulas and the draft/publish workflow. Saving a draft is separate from publishing the shared live MongoDB catalog.
+
 ## Local development
 
 Use Node.js 24. Keep the configured `.env` in the original local project folder.

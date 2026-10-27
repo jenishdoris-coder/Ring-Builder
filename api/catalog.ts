@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { setServers } from "node:dns";
 import { MongoClient } from "mongodb";
 import type { RingCatalog } from "../src/types/catalog";
+import { publicCatalog } from "../src/admin/catalog";
 
 type StoredCatalog = RingCatalog & { _id: string; updatedAt?: Date };
 const cache = globalThis as typeof globalThis & { __ringBuilderMongo?: Promise<MongoClient> };
@@ -32,13 +33,13 @@ export default async function handler(request: IncomingMessage, response: Server
     const mongo = await client();
     const document = await mongo.db(process.env.MONGODB_DB || undefined).collection<StoredCatalog>("ring_builder_catalogs").findOne({ _id: "active" });
     if (!document?.shapes?.length || !document.shanks?.length || !document.metals?.length) throw new Error("CatalogNotSeeded");
-    const { schemaVersion, releaseId, assetBaseUrl, shapes, shanks, metals, defaults } = document;
+    const { schemaVersion, releaseId, assetBaseUrl, shapes, shanks, metals, defaults, pricing, headStyles } = document;
     const etag = `W/"${releaseId}-${document.updatedAt?.getTime() ?? 0}"`;
     response.setHeader("ETag", etag);
     response.setHeader("Cache-Control", "public, max-age=0, s-maxage=300, stale-while-revalidate=3600");
     response.setHeader("X-Catalog-Source", "mongodb");
     if (request.headers["if-none-match"] === etag) { response.writeHead(304).end(); return; }
-    response.writeHead(200).end(request.method === "HEAD" ? undefined : JSON.stringify({ schemaVersion, releaseId, assetBaseUrl, shapes, shanks, metals, defaults }));
+    response.writeHead(200).end(request.method === "HEAD" ? undefined : JSON.stringify(publicCatalog({ schemaVersion, releaseId, assetBaseUrl, shapes, shanks, metals, defaults, pricing, headStyles })));
   } catch (error) {
     // Do not send database hosts, credentials, or driver diagnostics to clients.
     console.error("Catalog lookup failed", error instanceof Error ? error.name : "UnknownError");

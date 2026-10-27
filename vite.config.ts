@@ -6,8 +6,16 @@ const localCatalogApi = (): Plugin => ({
   name: "local-catalog-api",
   configureServer(server) {
     server.middlewares.use((request, response, next) => {
-      if (request.url?.split("?")[0] !== "/api/catalog") return next();
-      server.ssrLoadModule("/api/catalog.ts").then(module => module.default(request, response)).catch(() => {
+      const path = request.url?.split("?")[0];
+      if (path === "/api/pricing-demo") {
+        server.ssrLoadModule("/server/pricingDemo.ts").then(module => module.default(request,response)).catch(() => {
+          if (!response.headersSent) response.writeHead(503,{"Content-Type":"application/json","Cache-Control":"no-store"});
+          response.end(JSON.stringify({error:"Pricing demo temporarily unavailable"}));
+        });
+        return;
+      }
+      if (path !== "/api/catalog" && path !== "/api/admin" && path !== "/api/quote") return next();
+      server.ssrLoadModule(`${path}.ts`).then(module => module.default(request, response)).catch(() => {
         if (!response.headersSent) response.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
         response.end(JSON.stringify({ error: "Catalog temporarily unavailable" }));
       });
@@ -18,7 +26,7 @@ const localCatalogApi = (): Plugin => ({
 export default defineConfig(({ command, mode }) => {
   if (command === "serve") {
     const environment = loadEnv(mode, process.cwd(), "");
-    for (const name of ["MONGODB_URI", "MONGODB_DB", "MONGODB_DNS_SERVERS"]) if (environment[name]) process.env[name] = environment[name];
+    for (const [name, value] of Object.entries(environment)) if (/^(MONGODB_|CLOUDFLARE_|ADMIN_)/.test(name) && value) process.env[name] = value;
     process.env.MONGODB_DNS_SERVERS ||= "1.1.1.1,8.8.8.8";
   }
   return {

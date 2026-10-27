@@ -1,0 +1,53 @@
+.admin-pricing-master { display: flex; align-items: center; gap: 24px; padding: 25px 28px; margin-bottom: 22px; background: #f0eeea; border-color: #e5e2dc; }
+.admin-pricing-master > div:first-child { margin-right: auto; }
+.admin-pricing-master h2 { font-size: 20px; font-weight: 500; margin: 7px 0; letter-spacing: -.4px; }
+.admin-pricing-master p:not(.admin-kicker) { font-size: 11px; color: #a39b8c; max-width: 340px; line-height: 1.7; }
+.admin-pricing-master > .admin-field { width: 112px; margin: 0; }
+.admin-multiplier-input { display: flex; align-items: center; background: #fff; border: 1px solid #d9d5cb; padding: 10px 14px; border-radius: 9px; color: #a19580; gap: 9px; }
+.admin-multiplier-input > span { font-size: 22px; }
+.admin-multiplier-input > input { border: 0; width: 80px; color: #526576; font-size: 26px; outline: 0; background: transparent; }
+.admin-pricing-layout { display: grid; grid-template-columns: minmax(0,1fr) 305px; align-items: start; gap: 22px; }
+.admin-pricing-configuration { min-width: 0; }
+.admin-price-calculator { position: sticky; top: 98px; }
+.admin-price-calculator .admin-field { margin-bottom: 15px; }
+.admin-price-calculator .admin-settings-fields { padding: 20px; }
+.admin-price-calculator .admin-field > span { font-size: 10px; }
+.admin-price-calculator select { font-size: 11px; padding: 9px 8px; }
+.admin-price-calculator .admin-field-row { gap: 10px; }
+.admin-pricing-mode { padding: 22px; }
+.admin-pricing-mode > .admin-visibility { border: 0; padding: 0; }
+.admin-price-mode-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.admin-price-mode-options > button { text-align: left; display: flex; flex-direction: column; gap: 8px; border: 1px solid #e3e7ed; border-radius: 8px; background: #fff; padding: 15px; color: #95a2af; }
+.admin-price-mode-options strong { font-size: 11px; color: #63798d; font-weight: 500; }
+.admin-price-mode-options small { font-size: 9px; line-height: 1.7; color: #a8b1bb; }
+.admin-price-mode-options .selected { border-color: #8ca4b7; background: #f4f8fa; }
+.admin-pricing-tabs { display: flex; gap: 4px; margin: 21px 0 15px; overflow: auto; padding-bottom: 3px; }
+.admin-pricing-tabs button { flex: 1; padding: 10px 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #9ba6b2; font-size: 11px; white-space: nowrap; }
+.admin-pricing-tabs [aria-selected="true"] { background: #fff; border-color: #dce4eb; color: #526d85; }
+.admin-pricing-table table { width: 100%; border-collapse: collapse; text-align: left; min-width: 550px; }
+.admin-pricing-table th { font-size: 9px; font-weight: 500; color: #9aa7b5; padding: 13px 16px; border-bottom: 1px solid #ebeff3; background: #fbfcfd; white-space: nowrap; }
+.admin-pricing-table td { padding: 12px 16px; border-bottom: 1px solid #f0f2f5; font-size: 10px; color: #8394a5; min-width: 100px; }
+.admin-pricing-table td:first-child { min-width: 105px; }
+.admin-pricing-table td strong { font-weight: 500; }
+.admin-pricing-table td small { display: block; color: #b4bdc6; font-size: 8px; margin-top: 4px; }
+.admin-pricing-table input, .admin-pricing-table select { width: 100%; min-width: 90px; border: 1px solid #e0e6ee; border-radius: 5px; background: #fff; padding: 8px; color: #627b91; font-size: 10px; }
+.admin-pricing-table input::placeholder { color: #bec7d0; font-size: 9px; }
+.admin-pricing-table input:focus, .admin-pricing-table select:focus { outline: 2px solid #8ca5bd40; outline-offset: 1px; border-color: #8ca5bd; }
+.admin-pricing-padding { padding: 16px 22px; margin: 0; }
+.admin-price-metal { display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
+.admin-price-metal i { width: 13px; height: 13px; border: 1px solid #00000012; border-radius: 50%; flex-shrink: 0; }
+.admin-price-breakdown { display: grid; gap: 13px; padding: 20px 0; border-top: 1px solid #e9edf2; }
+.admin-price-breakdown > div { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: #8e9caa; }
+.admin-price-breakdown strong { font-weight: 500; color: #667f96; white-space: nowrap; }
+.admin-price-breakdown small { display: block; font-size: 8px; color: #b2bec8; margin-top: 4px; }
+.admin-price-total { padding: 18px 16px; border-radius: 8px; background: #eef4f1; color: #809989; }
+.admin-price-total span { font-size: 10px; display: block; }
+.admin-price-total strong { display: block; font-size: 25px; font-weight: 500; letter-spacing: -.7px; color: #5e7d69; margin-top: 5px; }
+.admin-price-issues { font-size: 10px; line-height: 1.8; color: #ae9873; padding: 14px 0 0; }
+.admin-price-issues strong { font-weight: 500; }.admin-price-issues ul { padding-left: 15px; margin-top: 7px; }
+.admin-setting-style-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+@media (max-width: 1250px) { .admin-pricing-layout { grid-template-columns: 1fr; }.admin-price-calculator { position: static; }.admin-price-calculator > .admin-settings-fields { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }.admin-price-calculator .admin-price-breakdown, .admin-price-calculator .admin-price-total, .admin-price-calculator .admin-price-issues { grid-column: 1/-1; } }
+@media (max-width: 760px) { .admin-pricing-master { padding: 20px; flex-wrap: wrap; gap: 17px; }.admin-pricing-master > div:first-child { width: 100%; }.admin-pricing-master > .admin-field { margin-left: auto; }.admin-pricing-master h2 { font-size: 19px; }.admin-pricing-mode { padding: 18px; }.admin-price-mode-options > button { padding: 12px; }.admin-price-mode-options strong { font-size: 10px; }.admin-pricing-tabs button { padding: 10px; font-size: 10px; }.admin-price-calculator > .admin-settings-fields { display: block; }.admin-page-heading { flex-wrap: wrap; }.admin-page-actions { flex-wrap: wrap; } }
+
+.admin-root .admin-pricing-master { background: #f0eeea; border-color: #e5e2dc; }
+.admin-root .admin-multiplier-input > input { font-size: 26px; }

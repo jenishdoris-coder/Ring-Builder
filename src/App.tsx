@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RingViewer from "./components/RingViewer";
 import { ViewerStage } from "./components/UI/ViewerStage";
 import { ConfiguratorPanel } from "./components/UI/ConfiguratorPanel";
@@ -11,16 +11,28 @@ import { EngravingPositionSwitch } from "./components/UI/EngravingPositionSwitch
 import { normalizeEngravingText, engravingTextError, type EngravingPosition, type EngravingStatus, type RingEngravingConfig } from "./config/engraving";
 import type { RingCameraView } from "./utils/ringCameraViews";
 import { DEFAULT_SKIN_TONE } from "./config/skinTones";
+import { headStyleId, LEGACY_HEAD_STYLE } from "./utils/ringPricing";
 import "./styles/configurator.css";
 import "./styles/productConfigurator.css";
 
 export const App = () => {
-  const catalog = useCatalog();
+  const [catalogError, setCatalogError] = useState("");
+  const catalog = useCatalog(setCatalogError);
+  const customized = useRef(false);
+  const previewingDraft = new URLSearchParams(location.search).get("preview") === "draft";
+  const pricingDemo = import.meta.env.DEV && new URLSearchParams(location.search).get("demo") === "pricing";
   const [selectedShapeId, setSelectedShapeId] = useState(DEFAULT_RING_CONFIG.shapeId);
   const [selectedCarat, setSelectedCarat] = useState(DEFAULT_RING_CONFIG.carat);
+  const [selectedHeadStyleId, setSelectedHeadStyleId] = useState<string>(LEGACY_HEAD_STYLE);
   const [selectedShankId, setSelectedShankId] = useState(DEFAULT_RING_CONFIG.shankId);
   const [selectedHeadMetalId, setSelectedHeadMetalId] = useState(DEFAULT_RING_CONFIG.metalId);
   const [selectedShankMetalId, setSelectedShankMetalId] = useState(DEFAULT_RING_CONFIG.metalId);
+  useEffect(() => {
+    if (customized.current) return;
+    setSelectedShapeId(catalog.defaults.shapeId); setSelectedCarat(catalog.defaults.carat);
+    setSelectedHeadStyleId(catalog.defaults.headStyleId || LEGACY_HEAD_STYLE);
+    setSelectedShankId(catalog.defaults.shankId); setSelectedHeadMetalId(catalog.defaults.metalId); setSelectedShankMetalId(catalog.defaults.metalId);
+  }, [catalog]);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [cameraView, setCameraView] = useState<RingCameraView>("front");
   const [cameraViewRevision, setCameraViewRevision] = useState(0);
@@ -63,7 +75,8 @@ export const App = () => {
     setEnlargedView(current => current?.key === request.key && current.image.id === request.viewId && current.image.engravingPosition === request.engravingPosition ? { ...current, image: image ?? current.image, pending: false } : current);
   }, []);
   const currentShape = catalog.shapes.find(item => item.id === selectedShapeId) ?? catalog.shapes[0];
-  const currentHead = currentShape.carats.find(item => item.carat === selectedCarat) ?? currentShape.carats[0];
+  const styleHeads = currentShape.carats.filter(item => headStyleId(item) === selectedHeadStyleId);
+  const currentHead = styleHeads.find(item => item.carat === selectedCarat) ?? styleHeads[0] ?? currentShape.carats[0];
   const currentShank = catalog.shanks.find(item => item.id === selectedShankId) ?? catalog.shanks[0];
   const headMetal = catalog.metals.find(item => item.id === selectedHeadMetalId) ?? catalog.metals[0];
   const shankMetal = catalog.metals.find(item => item.id === selectedShankMetalId) ?? catalog.metals[0];
@@ -93,7 +106,9 @@ export const App = () => {
     if (!enabled) handlePositionsChange([engravingPositions.includes(focusPosition) ? focusPosition : engravingPositions[0] ?? "bottom"]);
   };
   const handleReset = () => {
+    customized.current = true;
     setSelectedShapeId(catalog.defaults.shapeId); setSelectedCarat(catalog.defaults.carat); setSelectedShankId(catalog.defaults.shankId);
+    setSelectedHeadStyleId(catalog.defaults.headStyleId || LEGACY_HEAD_STYLE);
     setSelectedHeadMetalId(catalog.defaults.metalId); setSelectedShankMetalId(catalog.defaults.metalId); handleSelectCameraView("front");
     setEngraving([]); setEngravingTexts({ bottom: "", left: "", right: "" }); setEngravingPositions(["bottom"]); setMultipleEngraving(false); setEngravingStatus("idle"); setEngravingFocusPosition("bottom"); setEngravingPhotoPosition("bottom");
   };
@@ -106,6 +121,8 @@ export const App = () => {
     : hasEngraving && currentPreviews && !isModelLoading && !selectedEngravingPhoto && !photoFailed
       ? { key: previewKey, viewId: "engraving", resolution: RING_PREVIEW_RESOLUTION, engravingPosition: photoPosition } : undefined;
   return <div className="atelier-app-root product-page">
+    {pricingDemo && <div className="product-draft-banner product-pricing-demo-banner" role="status"><span>Pricing demo · Sample USD rates and weights, not a real quotation. Change the diamond, band, metals or ring size to try it.</span><a href="/">Exit demo</a></div>}
+    {previewingDraft && <div className={`product-draft-banner ${catalogError ? "has-error" : ""}`} role="status"><span>{catalogError || "Saved draft preview · These changes are not published"}</span><a href="/admin#publish">Back to admin</a></div>}
     <main className="product-layout">
       <section className="product-gallery-column" aria-label="Your ring gallery">
         <div className="product-gallery-grid">
@@ -130,8 +147,8 @@ export const App = () => {
           })}
         </div>
       </section>
-      <ConfiguratorPanel catalog={catalog} selectedShapeId={currentShape.id} onSelectShape={setSelectedShapeId} selectedCarat={currentHead.carat} onSelectCarat={setSelectedCarat} selectedShankId={currentShank.id} onSelectShank={setSelectedShankId}
-        selectedHeadMetalId={headMetal.id} onSelectHeadMetal={setSelectedHeadMetalId} selectedShankMetalId={shankMetal.id} onSelectShankMetal={setSelectedShankMetalId} onReset={handleReset}
+      <ConfiguratorPanel catalog={catalog} selectedHeadStyleId={headStyleId(currentHead)} onSelectHeadStyle={id => { customized.current = true; setSelectedHeadStyleId(id); }} selectedShapeId={currentShape.id} onSelectShape={id => { customized.current = true; setSelectedShapeId(id); }} selectedCarat={currentHead.carat} onSelectCarat={carat => { customized.current = true; setSelectedCarat(carat); }} selectedShankId={currentShank.id} onSelectShank={id => { customized.current = true; setSelectedShankId(id); }}
+        selectedHeadMetalId={headMetal.id} onSelectHeadMetal={id => { customized.current = true; setSelectedHeadMetalId(id); }} selectedShankMetalId={shankMetal.id} onSelectShankMetal={id => { customized.current = true; setSelectedShankMetalId(id); }} onReset={handleReset}
         engraving={{ texts: engravingTexts, positions: engravingPositions, multiple: multipleEngraving, applied: engraving, status: engravingStatus, busy: isModelLoading, onTextChange: (position, text) => setEngravingTexts(current => ({ ...current, [position]: text })), onPositionChange: handlePositionChange, onMultipleChange: handleMultipleChange, onApply: handleApplyEngraving, onRemove: handleRemoveEngraving }} />
     </main>
     {!enlargedView && <button type="button" className={`product-customization-scroll ${showCustomizationCue ? "" : "is-dismissed"}`} aria-hidden={!showCustomizationCue} tabIndex={showCustomizationCue ? 0 : -1} aria-controls="ring-customization" onClick={() => { setShowCustomizationCue(false); document.getElementById("ring-customization")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }}>

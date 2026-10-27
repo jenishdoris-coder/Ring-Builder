@@ -4,7 +4,7 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/catalog.ts": { "maxDuration": 30 } },
+  "functions": { "api/catalog.ts": { "maxDuration": 30 }, "api/admin.ts": { "maxDuration": 30 }, "api/quote.ts": { "maxDuration": 30 } },
   "rewrites": [
     { "source": "/((?!api(?:/|$)|assets(?:/|$)|_vercel(?:/|$)).*)", "destination": "/index.html" }
   ],

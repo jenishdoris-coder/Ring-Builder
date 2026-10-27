@@ -1,5 +1,5 @@
-import type { RingCatalog, CaratOption } from "../types/catalog";
-import type { ComponentPrice, PriceQuote, PriceSelection, PricingConfig } from "../types/pricing";
+import type { RingCatalog, CaratOption } from "../types/catalog.js";
+import type { ComponentPrice, PriceQuote, PriceSelection, PricingConfig } from "../types/pricing.js";
 export const LEGACY_HEAD_STYLE = "4-prong-talon";
 export const headStyleId = (head: CaratOption) => head.styleId || LEGACY_HEAD_STYLE;
 export const getHeadStyles = (catalog: RingCatalog) => catalog.headStyles?.length ? catalog.headStyles : [{ id: LEGACY_HEAD_STYLE, name: "4-Prong Talon", enabled: true }];

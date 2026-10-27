@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PriceSelection } from "../src/types/pricing";
-import { database } from "../server/db";
-import { readSession, sameOrigin } from "../server/adminAuth";
-import { quoteRing } from "../src/utils/ringPricing";
+import type { PriceSelection } from "../src/types/pricing.js";
+import { database } from "../server/db.js";
+import { readSession, sameOrigin } from "../server/adminAuth.js";
+import { quoteRing } from "../src/utils/ringPricing.js";
 
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
   response.setHeader("Content-Type", "application/json; charset=utf-8");

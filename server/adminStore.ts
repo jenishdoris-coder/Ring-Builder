@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { RingCatalog } from "../src/types/catalog";
-import { catalogCounts, storefrontCatalog, validateCatalog } from "../src/admin/catalog";
-import { database, mongoClient } from "./db";
-import { componentPricingOnly, getHeadStyles, headStyleId } from "../src/utils/ringPricing";
+import type { RingCatalog } from "../src/types/catalog.js";
+import { catalogCounts, storefrontCatalog, validateCatalog } from "../src/admin/catalog.js";
+import { database, mongoClient } from "./db.js";
+import { componentPricingOnly, getHeadStyles, headStyleId } from "../src/utils/ringPricing.js";
 
 export class AdminError extends Error { constructor(public status: number, message: string) { super(message); } }
 export const fail = (message: string, status = 400): never => { throw new AdminError(status, message); };

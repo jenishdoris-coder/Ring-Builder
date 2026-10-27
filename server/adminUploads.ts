@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { database } from "./db";
-import { event, fail } from "./adminStore";
+import { database } from "./db.js";
+import { event, fail } from "./adminStore.js";
 
 const client = () => {
   const names = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ACCESS_KEY_ID", "CLOUDFLARE_SECRET_ACCESS_KEY", "CLOUDFLARE_BUCKET_NAME", "CLOUDFLARE_R2_PUBLIC_URL"];

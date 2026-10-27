@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { setServers } from "node:dns";
 import { MongoClient } from "mongodb";
-import type { RingCatalog } from "../src/types/catalog";
-import { publicCatalog } from "../src/admin/catalog";
+import type { RingCatalog } from "../src/types/catalog.js";
+import { publicCatalog } from "../src/admin/catalog.js";
 
 type StoredCatalog = RingCatalog & { _id: string; updatedAt?: Date };
 const cache = globalThis as typeof globalThis & { __ringBuilderMongo?: Promise<MongoClient> };

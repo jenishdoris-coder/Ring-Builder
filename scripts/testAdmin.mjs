@@ -5,7 +5,7 @@ import ts from "typescript";
 const moduleUrl = async path => {
   const source = await readFile(new URL(path, import.meta.url), "utf8");
   let output = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
-  if (path.endsWith("/catalog.ts")) output = output.replace('"../utils/ringPricing"', JSON.stringify(await moduleUrl("../src/utils/ringPricing.ts")));
+  if (path.endsWith("/catalog.ts")) output = output.replace('"../utils/ringPricing.js"', JSON.stringify(await moduleUrl("../src/utils/ringPricing.ts")));
   if (path.endsWith("/deletion.ts")) output = output.replace('"./catalog"',JSON.stringify(await moduleUrl("../src/admin/catalog.ts"))).replace('"../utils/ringPricing"',JSON.stringify(await moduleUrl("../src/utils/ringPricing.ts")));
   return `data:text/javascript;base64,${Buffer.from(output).toString("base64")}`;
 };

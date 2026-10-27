@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { RingCatalog } from "../src/types/catalog";
-import type { PriceSelection } from "../src/types/pricing";
-import { activeCatalog } from "./adminStore";
-import { sameOrigin } from "./adminAuth";
-import { publicCatalog } from "../src/admin/catalog";
-import { bandPriceKey, emptyPricing, getHeadStyles, headPriceKey, headStyleId, quoteRing } from "../src/utils/ringPricing";
+import type { RingCatalog } from "../src/types/catalog.js";
+import type { PriceSelection } from "../src/types/pricing.js";
+import { activeCatalog } from "./adminStore.js";
+import { sameOrigin } from "./adminAuth.js";
+import { publicCatalog } from "../src/admin/catalog.js";
+import { bandPriceKey, emptyPricing, getHeadStyles, headPriceKey, headStyleId, quoteRing } from "../src/utils/ringPricing.js";
 
 /** Fictional values for the explicitly labelled local demo. Never saved. */
 export const pricingDemoCatalog = (source: RingCatalog): RingCatalog => {

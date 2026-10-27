@@ -1,5 +1,5 @@
-import type { RingCatalog } from "../types/catalog";
-import { getHeadStyles, headStyleId, validatePricing, LEGACY_HEAD_STYLE } from "../utils/ringPricing";
+import type { RingCatalog } from "../types/catalog.js";
+import { getHeadStyles, headStyleId, validatePricing, LEGACY_HEAD_STYLE } from "../utils/ringPricing.js";
 
 export const slug = (name: string) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 export const catalogCounts = (catalog: RingCatalog) => ({ bands: catalog.shanks.length, heads: catalog.shapes.reduce((sum, shape) => sum + shape.carats.length, 0), shapes: catalog.shapes.length, metals: catalog.metals.length });

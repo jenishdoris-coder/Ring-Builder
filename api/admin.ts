@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { database } from "../server/db";
-import { adminConfigured, equal, newSession, passwordMatches, readSession, sameOrigin, writeSessionCookie } from "../server/adminAuth";
-import { AdminError, adminState, fail, publishDraft, saveDraft } from "../server/adminStore";
-import { beginUpload, finishUpload } from "../server/adminUploads";
-import { publicCatalog, storefrontCatalog } from "../src/admin/catalog";
+import { database } from "../server/db.js";
+import { adminConfigured, equal, newSession, passwordMatches, readSession, sameOrigin, writeSessionCookie } from "../server/adminAuth.js";
+import { AdminError, adminState, fail, publishDraft, saveDraft } from "../server/adminStore.js";
+import { beginUpload, finishUpload } from "../server/adminUploads.js";
+import { publicCatalog, storefrontCatalog } from "../src/admin/catalog.js";
 
 const body = async (request: IncomingMessage) => {
   const parsed = (request as IncomingMessage & { body?: unknown }).body;

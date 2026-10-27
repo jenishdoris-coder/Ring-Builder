@@ -5,7 +5,7 @@ import type { EngravingPosition } from "../config/engraving";
 export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
 export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition };
 export const RING_PREVIEW_RESOLUTION = 1200;
-export const RING_PREVIEW_VERSION = "studio-1200-mobile-edge-aa-v13";
+export const RING_PREVIEW_VERSION = "studio-1200-shared-edge-aa-v14";
 
 /** Render just the enlarged photograph at a resolution suited to 3x zoom. */
 export const getRingDetailResolution = () => {

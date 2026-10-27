@@ -1788,7 +1788,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       const temporalAAPlugin: any = await getOrAddPlugin(TemporalAAPlugin);
       temporalAAPluginRef.current = temporalAAPlugin;
       if (temporalAAPlugin) {
-        temporalAAPlugin.enabled = isMobileDevice || TEMPORAL_AA_ENABLED;
+        temporalAAPlugin.enabled = TEMPORAL_AA_ENABLED;
         if ("stableNoise" in temporalAAPlugin) {
           temporalAAPlugin.stableNoise = TEMPORAL_AA_USE_TOTAL_FRAME_COUNT;
         } else if ("useTotalFrameCount" in temporalAAPlugin) {

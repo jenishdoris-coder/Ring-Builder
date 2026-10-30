@@ -1,0 +1,281 @@
+{
+  "description": "Unobscured photographic RGB rows at 77%, 83%, and 89% of the proximal bone in the latest capture. Jewelry/guides are below these rows. Tests use synthetic webbing for unrecorded rows; no camera-frame or intermediate skeleton is reconstructed.",
+  "source": "ring-tryon-2026-10-13T07-16-27-662Z",
+  "hand": {
+    "landmarks": [
+      {
+        "x": 0.40506,
+        "y": 0.79081,
+        "z": 0,
+        "worldX": -0.01323,
+        "worldY": 0.04635,
+        "worldZ": 0.02659
+      },
+      {
+        "x": 0.67168,
+        "y": 0.77211,
+        "z": -0.00634,
+        "worldX": 0.01102,
+        "worldY": 0.02915,
+        "worldZ": 0.01766
+      },
+      {
+        "x": 0.82478,
+        "y": 0.70542,
+        "z": 0.00437,
+        "worldX": 0.02316,
+        "worldY": 0.01889,
+        "worldZ": 0.0225
+      },
+      {
+        "x": 0.90501,
+        "y": 0.61377,
+        "z": 0.02006,
+        "worldX": 0.03004,
+        "worldY": 0.00992,
+        "worldZ": 0.01556
+      },
+      {
+        "x": 0.90947,
+        "y": 0.54254,
+        "z": 0.03756,
+        "worldX": 0.03062,
+        "worldY": 0.00006,
+        "worldZ": 0.00816
+      },
+      {
+        "x": 0.68937,
+        "y": 0.53112,
+        "z": 0.00427,
+        "worldX": 0.00373,
+        "worldY": -0.00329,
+        "worldZ": -0.00128
+      },
+      {
+        "x": 0.75237,
+        "y": 0.40885,
+        "z": 0.01407,
+        "worldX": 0.01136,
+        "worldY": -0.00691,
+        "worldZ": -0.00524
+      },
+      {
+        "x": 0.78162,
+        "y": 0.34747,
+        "z": 0.0214,
+        "worldX": 0.01746,
+        "worldY": -0.02151,
+        "worldZ": 0.00813
+      },
+      {
+        "x": 0.80044,
+        "y": 0.30933,
+        "z": 0.02539,
+        "worldX": 0.01891,
+        "worldY": -0.03581,
+        "worldZ": 0.02031
+      },
+      {
+        "x": 0.5418,
+        "y": 0.509,
+        "z": 0.00699,
+        "worldX": -0.00088,
+        "worldY": -0.00058,
+        "worldZ": -0.00156
+      },
+      {
+        "x": 0.57889,
+        "y": 0.36574,
+        "z": 0.01018,
+        "worldX": 0.00021,
+        "worldY": -0.01265,
+        "worldZ": -0.00153
+      },
+      {
+        "x": 0.59844,
+        "y": 0.29091,
+        "z": 0.00909,
+        "worldX": -0.00164,
+        "worldY": -0.03603,
+        "worldZ": 0.00471
+      },
+      {
+        "x": 0.61273,
+        "y": 0.24329,
+        "z": 0.00771,
+        "worldX": 0.00214,
+        "worldY": -0.05823,
+        "worldZ": 0.02144
+      },
+      {
+        "x": 0.41007,
+        "y": 0.51729,
+        "z": 0.0094,
+        "worldX": -0.00186,
+        "worldY": 0.00108,
+        "worldZ": -0.00013
+      },
+      {
+        "x": 0.42811,
+        "y": 0.37878,
+        "z": 0.00034,
+        "worldX": -0.00711,
+        "worldY": -0.00911,
+        "worldZ": 0.00204
+      },
+      {
+        "x": 0.45424,
+        "y": 0.30654,
+        "z": -0.01478,
+        "worldX": -0.00981,
+        "worldY": -0.03133,
+        "worldZ": 0.00835
+      },
+      {
+        "x": 0.47862,
+        "y": 0.25818,
+        "z": -0.02443,
+        "worldX": -0.0073,
+        "worldY": -0.05213,
+        "worldZ": 0.02039
+      },
+      {
+        "x": 0.30397,
+        "y": 0.54557,
+        "z": 0.01429,
+        "worldX": -0.00861,
+        "worldY": 0.00627,
+        "worldZ": 0.00955
+      },
+      {
+        "x": 0.27856,
+        "y": 0.43115,
+        "z": 0.00143,
+        "worldX": -0.01824,
+        "worldY": -0.00532,
+        "worldZ": 0.01026
+      },
+      {
+        "x": 0.27632,
+        "y": 0.3655,
+        "z": -0.0088,
+        "worldX": -0.02436,
+        "worldY": -0.0238,
+        "worldZ": 0.01512
+      },
+      {
+        "x": 0.29253,
+        "y": 0.31442,
+        "z": -0.01277,
+        "worldX": -0.02377,
+        "worldY": -0.03763,
+        "worldZ": 0.01449
+      }
+    ],
+    "handedness": "Left"
+  },
+  "viewport": {
+    "width": 504,
+    "height": 920
+  },
+  "video": {
+    "width": 720,
+    "height": 1280
+  },
+  "raw": {
+    "x": 216.66714,
+    "y": 408.82592,
+    "width": 76.01931,
+    "orientation": [
+      0.03848,
+      0.99184,
+      0.0138,
+      0.12078
+    ],
+    "fingerLength": 127.77518,
+    "handScale": 276.90402,
+    "imageDepthScale": 517.5,
+    "fingerSegment": {
+      "base": {
+        "x": 205.46234,
+        "y": 475.90745
+      },
+      "tip": {
+        "x": 214.7968,
+        "y": 348.47369
+      },
+      "fraction": 0.53
+    }
+  },
+  "rendered": {
+    "x": 217.47844,
+    "y": 409.83811,
+    "width": 77.64225,
+    "orientation": [
+      0.04139,
+      0.9895,
+      0.01941,
+      0.13712
+    ],
+    "fingerLength": 127.77518,
+    "handScale": 276.90402,
+    "imageDepthScale": 517.5,
+    "fingerSegment": {
+      "base": {
+        "x": 205.46234,
+        "y": 475.90745
+      },
+      "tip": {
+        "x": 214.7968,
+        "y": 348.47369
+      },
+      "fraction": 0.53
+    }
+  },
+  "sampling": {
+    "rows": [
+      {
+        "position": 0.77,
+        "rgb": "w6aLxKeMxKaKwaKGwaKHwqOIx6iOyKmRxqaMxqaLxqeKxaaIw6SEv599vp17v518wp9/vZp6v5x8wqKDxKWHvZ1/uZt9rpB1poltn4FkkXRZgWRPmoV1w7uuu7irvbmsvbeqvbeqv7irvrmsv7quv7quvrmtwbywvrqtwL2wwr6yv7uuvrmsvrmsvrmssKiZpY93sJZ7uJyAvZ+Et5p9uZt9upx9u51+u51/upt7upt8xKOFwqKEvp+Aw6KFwqSFyql3/9RcuJh7upl8uJh7u51/rItvqopsrYxvsJByro1xqoltqottn4Fjn4FinH9hlXlbkXZalHlfi3JXg2pPgGZOfF5Fb1E3aUoxYkUts6KSxsK3wLyxvrmsvrmsrJ6PoIZrsJR1up2CxKSKx6mKx6mJyKuMzK6Pz7KT0LOTzbCPz6+PzK6NzrGQza+P1LaWz7GSza2OyquMzayNwqGAtpR3uph7tZJyuZd2"
+      },
+      {
+        "position": 0.83,
+        "rgb": "zbKWya+TybCTya+Rx6yPy7CUzLGUzrOVzrSU1bma07eY1biZ1biXz7KRzrGQ0bOTza+RyqyOyKiJx6aIx6aIxKOGvJ1/qYxvoYVnkXVafmRRwbOovLasvrqvwb2ywb6yv7uuvrmsv7qsv7utvLmruraovLmrvbmsvbmrurWoubSnu7aovLeqvLervbeprJ2Lr5d/tJmBtJuCspmAtpyCr5N4spV5tph8tph7vp+BvJ1/u5x+u5p9wqGEyamMyKmLy6qE/9Rcvp+Dupt+tZV4spF0s5R3spN2tZV3ro5xspR2r5FzqIlrp4lqpohqm35hnoJol3xklXphjnNaiW1UhGhQfF5GclQ8akszbVI9yburyMa6xse7wMC2vb2xqqCRn4h0tJZ+vZ+ExaiKy66OzbCQyq2Ox6qLyKqLyKqKx6mKzq+Qz7GT0rWXzrKTyqyOza6Qzq+Sx6eJxaaHwqF/vJl4u5d3upd5u5l8"
+      },
+      {
+        "position": 0.89,
+        "rgb": "2r+i17ye1bmc0reb07ia0reZ07aY0rWWz7GS0rWW1beY07WW1LeY0rSW07WW0rOVzK2QyauOwKKEu5t8tpZ4ro5wpIVomH1jhWxUhW1bxryxwLuwv7quvrmsvbirv7qtwbytwr2uwryuwr2vv7qswLutvrmrvripvbipwLuswbyuv7quvrmvwbyywLmvqZeHqI53qZF4pIpvpoxvpoxvp41xqY91rpJ4sJN5sZR5rI5ys5R3s5J2sY90rIpvr410s5Fz/9RcyKqSuZ2GuJqDt5mAt5p/tJV7sZN2q41wqotvpYdqo4ZooINln4NmnIJlkXdbkndbkXdciG5Wg2lQgGVMfWBJdVY+bEw0hGxWwrqqvbmrubWot7GjtrCht7Cfn4hyspZ9uZuAvJ1/x6aIyKiJy62Nz7GSyqyNyqyNyKqMzrCSz7KU0rWYzK6QyquNyqqNxqaIy6mMw6GExKKEv51/wJ6AwJ6Au5l7"
+      }
+    ],
+    "base": {
+      "x": 90,
+      "y": 250
+    },
+    "tip": {
+      "x": 90,
+      "y": 161.1160224544378
+    },
+    "neighbors": [
+      {
+        "base": {
+          "x": 136.9083846651974,
+          "y": 250
+        },
+        "tip": {
+          "x": 143.5259331980417,
+          "y": 161.1160224544378
+        }
+      },
+      {
+        "base": {
+          "x": 53.228530718659485,
+          "y": 250
+        },
+        "tip": {
+          "x": 38.754843076805834,
+          "y": 161.1160224544378
+        }
+      }
+    ]
+  }
+}

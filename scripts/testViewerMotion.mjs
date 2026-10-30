@@ -8,7 +8,7 @@ const load = async path => {
   return import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 };
 const { DampedRingZoom } = await load("src/utils/ringZoom.ts");
-const { waitForCompleteRingFrame } = await load("src/utils/viewerFrame.ts");
+const { waitForCompleteRingFrame, waitForViewerPresentation } = await load("src/utils/viewerFrame.ts");
 const fixture = () => {
   const camera = new PerspectiveCamera(45, 1, .01, 100);
   camera.position.set(0, 0, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
@@ -77,4 +77,30 @@ const cancelled = waitForCompleteRingFrame(disposed.viewer, () => true);
 disposed.viewer.emit("dispose");
 assert.equal(await cancelled, false, "closing a viewer releases a pending capture barrier");
 assert.equal(disposed.events.get("postRender").size, 0);
+
+const startup = viewerFixture();
+let presented = false;
+const presentation = waitForViewerPresentation(startup.viewer, () => true, true).then(value => { presented = value; return value; });
+startup.viewer.scene.renderCamera = {};
+for (let i = 0; i < 8; i++) startup.viewer.emit("postRender");
+await Promise.resolve();
+assert.equal(presented, false, "startup photo renders cannot reveal the live canvas");
+startup.viewer.scene.renderCamera = startup.viewer.scene.activeCamera;
+for (let i = 0; i < 5; i++) startup.viewer.emit("postRender");
+await Promise.resolve();
+assert.equal(presented, false, "rotation must settle behind the initial loading dots");
+startup.viewer.emit("postRender");
+assert.equal(await presentation, true);
+assert.equal(startup.events.get("postRender").size, 0);
+
+const still = viewerFixture();
+let converged = false, dirty = 0;
+still.viewer.getPluginByType = () => ({ enabled: true, maxFrameCount: 60, isConverged: () => converged });
+still.viewer.setDirty = () => dirty++;
+const accumulation = waitForViewerPresentation(still.viewer, () => true, false);
+for (let i = 0; i < 8; i++) still.viewer.emit("postRender");
+assert.equal(dirty, 1, "static startup must accumulate instead of resetting quality every frame");
+converged = true;
+still.viewer.emit("postRender");
+assert.equal(await accumulation, true);
 console.log("Viewer motion checks passed: zoom glide, damping, limits, frame rate, cursor anchor, and complete dissolve frames before capture.");

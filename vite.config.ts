@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import deployment from "./src/config/deployment.json";
+import { readFileSync } from "node:fs";
 
 const localCatalogApi = (): Plugin => ({
   name: "local-catalog-api",
@@ -34,9 +35,11 @@ export default defineConfig(({ command, mode }) => {
     // Hosted assets are served by R2 rather than copied into Vercel's deployment.
     publicDir: command === "build" && deployment.assetBaseUrl ? false : "public",
     server: {
-      host: "0.0.0.0", port: 5173, strictPort: true,
-      watch: { usePolling: true, interval: 300, ignored: ["**/artifacts/**", "**/vercel-upload/**"] },
+      host: "0.0.0.0", port: process.env.RING_HTTPS === '1' ? 5443 : 5173, strictPort: true,
+      ...(process.env.RING_HTTPS === '1' ? { https: { cert: readFileSync('.cert/server.crt.pem'), key: readFileSync('.cert/server.key.pem') } } : {}),
+      fs: { deny: ['.env', '.env.*', '*.{crt,pem,key}', '**/.git/**', '**/.cert/**'] },
+      watch: { usePolling: true, interval: 300, ignored: ["**/artifacts/**", "**/vercel-upload/**", "**/.cert/**"] },
     },
-    resolve: { alias: { webgi: "webgi/dist/examples/runtime/bundle.m.js" } },
+    resolve: { alias: { webgi: "webgi/dist/examples/runtime/bundle.m.js" }, dedupe: ["react", "react-dom", "three"] },
   };
 });

@@ -13,8 +13,8 @@ try {
 } catch (error) { if (error.code !== "ENOENT") throw error; }
 await mkdir(output, { recursive: true });
 
-const roots = ["src", "api", "server", "scripts"];
-const topFiles = ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vercel.json", "index.html", ".gitignore", ".vercelignore", ".env.example", "README.md", "DEPLOY_VERCEL.md", "THIRD_PARTY_ASSETS.md"];
+const roots = ["src", "api", "server", "scripts", "ar/src", "ar/runtime", "ar/tests"];
+const topFiles = ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vercel.json", "index.html", ".gitignore", ".vercelignore", ".env.example", "README.md", "DEPLOY_VERCEL.md", "THIRD_PARTY_ASSETS.md", "ar/package.json", "ar/tsconfig.json", "ar/README.md"];
 const files = [];
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -34,5 +34,5 @@ for (const path of files) {
   await copyFile(path, destination);
 }
 await writeFile(join(output, marker), JSON.stringify({ generator: "ring-builder", createdAt: new Date().toISOString() }, null, 2));
-if (files.length + 1 > 100) throw new Error("Upload exceeds GitHub's 100-file browser upload limit.");
+if (files.length + 1 > 100) console.warn("For a manual GitHub browser upload, upload these folders in batches of at most 100 files, or use Git.");
 console.log(JSON.stringify({ folder: output, files: files.length + 1, credentialsIncluded: false, localModelsIncluded: false }));

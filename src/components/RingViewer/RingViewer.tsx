@@ -124,10 +124,11 @@ import { alignRingHeadToShank } from "../../utils/ringAssembly";
 import { captureRingPreviews, type RingPreviewImage, type RingDetailPreviewRequest } from "../../utils/ringPreview";
 import { getRingCameraPose, type RingCameraView } from "../../utils/ringCameraViews";
 import { HandPreview } from "../../utils/handPreview";
+import { isLifestyleView } from "../../config/lifestylePhotos";
 import { MultiRingEngraving as RingEngraving } from "../../utils/ringEngraving";
 import type { EngravingPosition, EngravingStatus, RingEngravingConfig } from "../../config/engraving";
 import { DEFAULT_SKIN_TONE } from "../../config/skinTones";
-import { holdViewerFrame, clearViewerFrames, waitForCompleteRingFrame } from "../../utils/viewerFrame";
+import { holdViewerFrame, clearViewerFrames, waitForCompleteRingFrame, waitForViewerPresentation } from "../../utils/viewerFrame";
 import { DampedRingZoom } from "../../utils/ringZoom";
 
 // Types
@@ -153,6 +154,7 @@ export interface RingViewerProps {
   detailPreviewRequest?: RingDetailPreviewRequest;
   onDetailPreviewChange?: (request: RingDetailPreviewRequest, image: RingPreviewImage | null) => void;
   isAutoRotating?: boolean;
+  paused?: boolean;
   handSkinTone?: number;
   onLoadingChange?: (loading: boolean) => void;
   ringTransform?: RingTransform;
@@ -235,6 +237,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const selectedCameraViewRef = useRef(props.cameraView);
   selectedCameraViewRef.current = props.cameraView;
   const cameraRequestRef = useRef(0);
+  const appliedCameraRequestRef = useRef("");
   const [handPreviewStatus, setHandPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const handSkinToneRef = useRef(props.handSkinTone ?? DEFAULT_SKIN_TONE);
   handSkinToneRef.current = props.handSkinTone ?? DEFAULT_SKIN_TONE;
@@ -242,6 +245,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const controlsLockDepthRef = useRef(0);
   const viewerInputLockedRef = useRef(false);
   const initialRevealDoneRef = useRef(false);
+  const initialPresentationDoneRef = useRef(false);
   const isAutoRotatingRef = useRef(false);
   isAutoRotatingRef.current = props.isAutoRotating === true && (!props.cameraView || props.cameraView === "front" || props.cameraView === "hero");
   const loadModelsRef = useRef<any>(null);
@@ -760,14 +764,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         };
 
         const revealViewerAfterFirstLoad = () => {
-          if (initialRevealDoneRef.current) return;
+          // Materials are ready, but the first photo capture still temporarily
+          // changes targets and camera. Keep the initial cover until restored.
           initialRevealDoneRef.current = true;
-          setIsViewerRevealed(true);
-          try {
-            window.parent?.postMessage?.("VIEWER_READY", "*");
-          } catch {
-            /* ignore cross-origin postMessage errors */
-          }
         };
 
         const getRingRoots = () =>
@@ -1467,7 +1466,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             await initializeRingCameraRef.current?.();
             if (loadId !== loadIdRef.current || viewer !== viewerRef.current) return;
             revealViewerAfterFirstLoad();
-            console.log("Load complete — metal and diamond materials applied, viewer revealed");
+            console.log("Load complete — metal and diamond materials prepared");
           } else if (headShankSwapPrepared) {
             await runFullRingDiamondRefresh({ restoreHeadShankVisibility: false });
             if (loadId !== loadIdRef.current) {
@@ -1546,6 +1545,18 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
         ensureSSRDisabled(viewer);
         viewer.setDirty?.();
         if (viewer.scene?.setDirty) viewer.scene.setDirty();
+        if (initialRevealDoneRef.current && !initialPresentationDoneRef.current && loadId === loadIdRef.current && viewer === viewerRef.current) {
+          // Start the normal motion behind the initial dots. Reveal the same
+          // rendered state that will continue on screen, rather than a static
+          // frame which changes quality/brightness when rotation begins.
+          const complete = await waitForViewerPresentation(viewer, () => loadId === loadIdRef.current && viewer === viewerRef.current, isAutoRotatingRef.current);
+          if (complete) {
+            clearViewerFrames(canvasRef.current);
+            initialPresentationDoneRef.current = true;
+            setIsViewerRevealed(true);
+            window.parent?.postMessage?.("VIEWER_READY", "*");
+          }
+        }
       }
     },
     [
@@ -2482,7 +2493,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       try {
         const roots = [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible);
         const engraving = engravingRef.current;
-        const [image] = await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition, "photo") } : undefined });
+        const image = isLifestyleView(request.viewId)
+          ? await (await import("../../utils/lifestylePreview")).captureLifestylePreview(viewer, roots, request.viewId, request.resolution, controller.signal)
+          : (await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition, "photo") } : undefined }))[0];
         if (!controller.signal.aborted && viewerRef.current === viewer) {
           if (image) {
             if (detailPreviewCacheRef.current.size >= 3) detailPreviewCacheRef.current.delete(detailPreviewCacheRef.current.keys().next().value!);
@@ -2512,15 +2525,40 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     return () => controller.abort();
   }, [isViewerReady, props.previewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
 
+  // The studio stays mounted so its selected angle, models and photos survive
+  // try-on. Stop its RAF and image work while the camera owns the GPU.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!isViewerReady || !viewer || !props.paused) return;
+    const wasEnabled = viewer.enabled;
+    const inputEnabled = !viewerInputLockedRef.current;
+    const tween = cameraTweenRef.current;
+    previewCaptureRef.current?.abort();
+    zoomRef.current.stop();
+    tween?.pause();
+    setViewerControlsEnabled(false);
+    viewer.enabled = false;
+    return () => {
+      if (viewerRef.current !== viewer) return;
+      viewer.enabled = wasEnabled;
+      setViewerControlsEnabled(inputEnabled);
+      tween?.resume();
+      viewer.setDirty();
+    };
+  }, [isViewerReady, props.paused, setViewerControlsEnabled]);
+
   // ── Camera view prop handler ───────────────────────────────────────────────
   useEffect(() => {
-    if (!isViewerReady || !props.cameraView) return;
+    if (!isViewerReady || !props.cameraView || props.paused) return;
+    const request = `${props.cameraView}:${props.cameraViewRevision ?? 0}:${props.cameraView === "engraving" ? props.engravingFocusPosition : ""}`;
+    if (request === appliedCameraRequestRef.current) return;
+    appliedCameraRequestRef.current = request;
     if (!firstCameraPropHandledRef.current) {
       firstCameraPropHandledRef.current = true;
       if (initialCameraReadyRef.current && (props.cameraView === "front" || props.cameraView === "hero")) return;
     }
     (window as any).goToCameraView?.(props.cameraView);
-  }, [isViewerReady, props.cameraView, props.cameraViewRevision, props.cameraView === "engraving" ? props.engravingFocusPosition : undefined]);
+  }, [isViewerReady, props.paused, props.cameraView, props.cameraViewRevision, props.cameraView === "engraving" ? props.engravingFocusPosition : undefined]);
 
   // ── Auto rotate prop handler ───────────────────────────────────────────────
   useEffect(() => {
@@ -2658,6 +2696,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     <section
       className="page viewer-page"
       data-part-transition={partTransitionPhase}
+      data-render-paused={props.paused === true}
       aria-busy={partTransitionPhase !== "idle"}
       style={{ width: "100%", height: "100%", position: "relative" }}
     >

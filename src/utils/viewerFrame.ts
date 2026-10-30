@@ -43,6 +43,35 @@ export const clearViewerFrames = (canvas: HTMLCanvasElement | null) => {
   canvas?.parentElement?.querySelectorAll("img[data-camera-frame]").forEach(image => image.remove());
 };
 
+/** First presentation uses the finished live pipeline, including rotation.
+ * Safari must not see the static warm-up, photo cameras, or their AA history. */
+export const waitForViewerPresentation = (viewer: any, isCurrent: () => boolean, moving: boolean): Promise<boolean> => {
+  if (!isCurrent()) return Promise.resolve(false);
+  const progressive = viewer.getPluginByType?.("Progressive");
+  const budget = progressive?.enabled ? Math.max(6, progressive.maxFrameCount || 60) : 6;
+  return new Promise(resolve => {
+    let frames = 0;
+    const finish = (complete: boolean) => {
+      viewer.removeEventListener("postRender", rendered);
+      viewer.removeEventListener("dispose", disposed);
+      resolve(complete);
+    };
+    const disposed = () => finish(false);
+    const rendered = () => {
+      if (!isCurrent()) return finish(false);
+      if (viewer.scene.renderCamera !== viewer.scene.activeCamera || viewer.renderer?.defaultRenderToScreen === false) return;
+      frames++;
+      if (frames >= 6 && (moving || !progressive?.enabled || progressive.isConverged?.(true) || frames >= budget)) finish(true);
+      // Progressive rendering schedules its own accumulation. Resetting it on
+      // every static frame would prevent the initial image from settling.
+      else if (moving || !progressive?.enabled) viewer.setDirty();
+    };
+    viewer.addEventListener("postRender", rendered);
+    viewer.addEventListener("dispose", disposed);
+    viewer.setDirty();
+  });
+};
+
 /** A completed animation can still have its penultimate pixels on the canvas. */
 export const waitForCompleteRingFrame = (viewer: any, isCurrent: () => boolean): Promise<boolean> => {
   if (!isCurrent()) return Promise.resolve(false);

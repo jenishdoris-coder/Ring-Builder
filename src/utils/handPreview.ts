@@ -2,7 +2,7 @@ import { Color, Matrix4, Object3D, Vector3 } from "webgi";
 import calibration from "../config/handPreview.json";
 import { assetUrl } from "../config/assets";
 import { PART_LOAD_OPTIONS } from "./partLoader";
-import { isDiamondMesh } from "./meshUtils";
+import { measureRingBore } from "./ringBore";
 import { fitCameraToPoints } from "./ringCameraViews";
 import { DEFAULT_SKIN_TONE, getSkinToneLinear } from "../config/skinTones";
 
@@ -14,12 +14,16 @@ export class HandPreview {
   private loaded = false;
   private sourceMesh: any;
   private sourceFrame = new Matrix4();
+  private sourcePositions?: Float32Array;
+  private surfaceFitKey = "";
+  private depthState?: { camera: any; near: number; far: number; auto: any; min: any; max: any };
   private skinTone = { value: new Color().setRGB(...getSkinToneLinear(DEFAULT_SKIN_TONE)) };
   private groundState?: { enabled: boolean; visible: boolean; meshVisible: boolean };
 
   constructor(private viewer: any, private manager: any) {
     this.root.name = "ring-finger-hand-preview";
     this.root.visible = false;
+    this.viewer.addEventListener?.("preRender", this.updateDepthRange);
   }
 
   async load() {
@@ -39,6 +43,13 @@ export class HandPreview {
         if (!this.sourceMesh) {
           this.sourceMesh = mesh;
           this.sourceFrame.copy(this.root.matrixWorld).invert().multiply(mesh.matrixWorld);
+          mesh.geometry = mesh.geometry.clone();
+          const positions = mesh.geometry.attributes.position;
+          // Imported GLBs may interleave position, normal, UV and tangent data.
+          this.sourcePositions = new Float32Array(positions.count * 3);
+          for (let i = 0; i < positions.count; i++) {
+            this.sourcePositions.set([positions.getX(i), positions.getY(i), positions.getZ(i)], i * 3);
+          }
         }
         mesh.castShadow = false;
         for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
@@ -70,7 +81,11 @@ export class HandPreview {
             `);
           };
           material.customProgramCacheKey = () => "hand-skin-palette-linear-v2";
-          material.userData.renderToDepth = false;
+          // The hand must participate in the same depth pass as the metal and
+          // diamonds; excluding it gives the later passes a different surface.
+          material.userData.renderToDepth = true;
+          material.depthWrite = true;
+          material.depthTest = true;
           material.needsUpdate = true;
         }
       });
@@ -93,33 +108,23 @@ export class HandPreview {
 
   /** Move the hand around the unchanged ring; the ring keeps its assembled pose. */
   private fit(shank: any) {
-    shank.updateWorldMatrix(true, true);
-    const inverse = shank.matrixWorld.clone().invert();
-    const radii: number[] = [];
-    const point = new Vector3();
-    shank.traverseVisible((mesh: any) => {
-      const positions = mesh.isMesh && !isDiamondMesh(mesh) && mesh.geometry?.attributes?.position;
-      if (!positions) return;
-      for (let index = 0; index < positions.count; index++) {
-        point.fromBufferAttribute(positions, index).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverse);
-        if (point.z < 0) radii.push(Math.hypot(point.x, point.z));
-      }
-    });
-    radii.sort((a, b) => a - b);
-    const innerRadius = radii[Math.floor(radii.length * 0.02)];
-    if (!Number.isFinite(innerRadius) || innerRadius <= 0) throw new Error("The selected band has no ring opening.");
+    const { radius: innerRadius, halfWidth } = measureRingBore(shank);
     const ringScale = new Vector3().setFromMatrixScale(shank.matrixWorld).x;
     const finger = calibration.ringFinger;
     const axis = new Vector3(...finger.axis as [number, number, number]).normalize();
-    // The calibrated roll moves the crown toward the centre of this right
-    // hand's ring finger while keeping the bore axis and seating point fixed.
+    // Align the crown with the dorsal centre of this right-hand finger.
     const dorsal = new Vector3(...finger.dorsal as [number, number, number]).normalize().applyAxisAngle(axis, finger.rollDegrees * Math.PI / 180);
     const lateral = new Vector3().crossVectors(axis, dorsal).normalize();
     const handBasis = new Matrix4().makeBasis(lateral, axis, dorsal);
     const ringRotation = new Matrix4().extractRotation(shank.matrixWorld);
     const scale = innerRadius * ringScale / finger.radius * finger.clearance;
     const rawWorld = new Matrix4().multiplyMatrices(ringRotation, handBasis.invert()).scale(new Vector3(scale, scale, scale));
-    const anchor = new Vector3(...finger.anchor as [number, number, number]).applyMatrix4(rawWorld);
+    // Keep the palm-side edge of wide/multi-row bands clear of the finger web.
+    const halfWidthOnHand = halfWidth * ringScale / scale;
+    const seatOffset = Math.min(.65, Math.max(.08, halfWidthOnHand - .12));
+    const seat = new Vector3(...finger.anchor as [number, number, number]).addScaledVector(axis, seatOffset);
+    this.fitFingerSurface(seat, axis, halfWidthOnHand);
+    const anchor = seat.applyMatrix4(rawWorld);
     const center = new Vector3().setFromMatrixPosition(shank.matrixWorld);
     rawWorld.setPosition(center.sub(anchor));
     // Calibration is in mesh coordinates. Cancel the GLB's Sketchfab axis
@@ -131,6 +136,72 @@ export class HandPreview {
     this.root.updateWorldMatrix(false, true);
   }
 
+  /** Skin is compliant: only the small patch under the band follows its bore.
+   * Keep the original hand everywhere else and never deform the jewellery. */
+  private fitFingerSurface(seat: Vector3, axis: Vector3, halfWidth: number) {
+    const positions = this.sourceMesh.geometry.attributes.position;
+    if (!this.sourcePositions) return;
+    const key = `${seat.toArray()}:${halfWidth.toFixed(5)}`;
+    if (key === this.surfaceFitKey) return;
+    this.surfaceFitKey = key;
+    const radius = calibration.ringFinger.radius;
+    const point = new Vector3(), radial = new Vector3();
+    for (let i = 0; i < positions.count; i++) {
+      point.fromArray(this.sourcePositions, i * 3);
+      radial.copy(point).sub(seat);
+      const axial = radial.dot(axis);
+      radial.addScaledVector(axis, -axial);
+      const length = radial.length();
+      if (length > radius * .5 && length < radius * 1.12 && Math.abs(axial) < halfWidth + .32) {
+        const t = Math.max(0, Math.min(1, (Math.abs(axial) - halfWidth - .02) / .3));
+        const weight = 1 - t * t * (3 - 2 * t);
+        point.addScaledVector(radial, (radius * .998 / length - 1) * weight);
+      }
+      positions.setXYZ(i, point.x, point.y, point.z);
+    }
+    positions.needsUpdate = true;
+    this.sourceMesh.geometry.computeVertexNormals();
+    this.sourceMesh.geometry.computeBoundingBox();
+    this.sourceMesh.geometry.computeBoundingSphere();
+  }
+
+  /** RootScene's whole-hand bounding sphere wastes depth precision around a
+   * very thin band. Fit near/far to actual eye-space skin and ring extents. */
+  private updateDepthRange = () => {
+    if (!this.active || !this.root.visible || !this.sourceMesh) return;
+    const camera = this.viewer.scene.activeCamera;
+    const object = camera.cameraObject ?? camera;
+    object.updateMatrixWorld(true);
+    this.depthState ??= { camera, near: camera.near, far: camera.far, auto: object.userData.autoNearFar, min: object.userData.minNearPlane, max: object.userData.maxFarPlane };
+    const transform = new Matrix4().multiplyMatrices(object.matrixWorldInverse, this.sourceMesh.matrixWorld);
+    const e = transform.elements, positions = this.sourceMesh.geometry.attributes.position;
+    let nearest = Infinity, farthest = 0;
+    for (let i = 0; i < positions.count; i++) {
+      const depth = -(e[2] * positions.getX(i) + e[6] * positions.getY(i) + e[10] * positions.getZ(i) + e[14]);
+      if (depth > 0) { nearest = Math.min(nearest, depth); farthest = Math.max(farthest, depth); }
+    }
+    if (!Number.isFinite(nearest)) return;
+    // Include the crown protruding above the dorsal skin without widening the
+    // depth interval to a scene-wide ground plane or bounding sphere.
+    const margin = calibration.ringFinger.radius * new Vector3().setFromMatrixScale(this.sourceMesh.matrixWorld).x * 1.8;
+    const near = Math.max(.01, nearest - margin), far = Math.max(near + .1, farthest + margin);
+    object.userData.autoNearFar = false;
+    object.userData.minNearPlane = camera.near = near;
+    object.userData.maxFarPlane = camera.far = far;
+    object.near = near; object.far = far; object.updateProjectionMatrix();
+  };
+
+  private restoreDepthRange() {
+    if (!this.depthState) return;
+    const { camera, near, far, auto, min, max } = this.depthState;
+    const object = camera.cameraObject ?? camera;
+    for (const [key, value] of [["autoNearFar", auto], ["minNearPlane", min], ["maxFarPlane", max]] as const) {
+      if (value === undefined) delete object.userData[key]; else object.userData[key] = value;
+    }
+    camera.near = object.near = near; camera.far = object.far = far;
+    object.updateProjectionMatrix(); this.depthState = undefined;
+  }
+
   show(shank: any) {
     if (!this.loaded || this.disposed) return;
     if (!this.root.parent) this.viewer.scene.add(this.root);
@@ -138,10 +209,12 @@ export class HandPreview {
     this.active = true;
     this.root.visible = true;
     this.setGroundHidden(true);
+    this.updateDepthRange();
     this.viewer.setDirty?.();
   }
 
   hide() {
+    this.restoreDepthRange();
     this.active = false;
     this.root.visible = false;
     this.root.removeFromParent();
@@ -150,6 +223,7 @@ export class HandPreview {
   }
 
   suspend() {
+    this.restoreDepthRange();
     this.root.visible = false;
     this.root.removeFromParent();
     if (this.groundState) this.setGroundHidden(false);
@@ -177,7 +251,7 @@ export class HandPreview {
     });
     const meshWorld = this.sourceMesh.matrixWorld;
     const target = new Vector3(-0.2, -1.5, 17.8).applyMatrix4(meshWorld);
-    const direction = new Vector3(0.2, 1, 0.3).transformDirection(meshWorld);
+    const direction = new Vector3(...calibration.ringFinger.dorsal as [number, number, number]).transformDirection(meshWorld);
     const up = new Vector3(0, 0, 1).transformDirection(meshWorld);
     // Keep the hand between the two control rails while the canvas itself
     // stays full-width in every mode (no internal crop or resize flash).
@@ -185,7 +259,9 @@ export class HandPreview {
     const rail = stage ? parseFloat(getComputedStyle(stage).getPropertyValue("--viewer-right-rail")) || 64 : 0;
     const canvas = this.viewer.canvas;
     const safeAspect = Math.max(1, canvas.clientWidth - rail * 2) / Math.max(1, canvas.clientHeight);
-    return fitCameraToPoints(points, target, direction, up, camera, { aspect: safeAspect });
+    const pose = fitCameraToPoints(points, target, direction, up, camera, { aspect: safeAspect, padding: 1.08 });
+    pose.position.sub(pose.target).multiplyScalar(.82).add(pose.target);
+    return pose;
   }
 
   private releaseResources() {
@@ -203,5 +279,5 @@ export class HandPreview {
     this.root.clear();
   }
 
-  dispose() { this.hide(); this.disposed = true; this.releaseResources(); }
+  dispose() { this.hide(); this.viewer.removeEventListener?.("preRender", this.updateDepthRange); this.disposed = true; this.releaseResources(); }
 }

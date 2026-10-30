@@ -16,9 +16,12 @@ interface ViewerStageProps {
   engravingPositions: EngravingPosition[];
   engravingPosition: EngravingPosition;
   onSelectEngraving: (position: EngravingPosition) => void;
+  onTryAR?: () => void;
+  arDisabled?: boolean;
+  preparing?: boolean;
 }
 
-export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHandSkinTone, engravingPositions, engravingPosition, onSelectEngraving, ...controls }: ViewerStageProps) => {
+export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHandSkinTone, engravingPositions, engravingPosition, onSelectEngraving, onTryAR, preparing, ...controls }: ViewerStageProps) => {
   const [expanded, setExpanded] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -63,9 +66,10 @@ export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHan
       onPointerDownCapture={event => { if (event.pointerType === "touch") { touches.current.add(event.pointerId); clearTimeout(resumeRotation.current); onHoverChange(true); } }}
       onPointerUpCapture={event => { if (event.pointerType === "touch") finishTouch(event.pointerId); }} onPointerCancelCapture={event => { if (event.pointerType === "touch") finishTouch(event.pointerId); }}>
       {children}
+      {preparing && <div className="viewer-preparing-status" role="status"><span aria-hidden="true" />Preparing your ring</div>}
       {expanded && <button ref={closeRef} type="button" className="viewer-close-expanded" aria-label="Close expanded viewer" title="Close expanded viewer" onClick={() => setExpanded(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>}
       <div className="product-live-caption"><span className="product-live-dot" />{controls.currentView === "hand" ? "On-hand preview" : controls.currentView === "engraving" ? "Engraving detail" : "Interactive 3D"}</div>
-      <CameraControls {...controls} isExpanded={expanded} onToggleExpanded={() => setExpanded(value => !value)} />
+      <CameraControls {...controls} onTryAR={onTryAR ? () => { setExpanded(false); onTryAR(); } : undefined} isExpanded={expanded} onToggleExpanded={() => setExpanded(value => !value)} />
       <span className="viewer-touch-hint">Drag to rotate · Pinch to zoom</span>
       <EngravingPositionSwitch positions={engravingPositions} selected={engravingPosition} onSelect={onSelectEngraving} location="viewer" />
       <aside className="viewer-right-rail" aria-label={controls.currentView === "hand" ? "Hand appearance" : undefined}>

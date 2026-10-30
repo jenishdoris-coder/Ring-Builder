@@ -1,0 +1,19 @@
+{
+  "name": "@ring-builder/ar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-reporter=dot tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "three": "0.160.1",
+    "webgi": "https://storage.googleapis.com/dist.pixotronics.com/webgi/runtime/bundle-0.9.13.tgz"
+  },
+  "devDependencies": {
+    "@types/three": "0.160.0"
+  }
+}

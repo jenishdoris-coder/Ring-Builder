@@ -1,0 +1,865 @@
+{
+  "description": "Measured October 13 capture geometry and width/skin-scale traces; no missing intermediate skeletons are reconstructed",
+  "captures": [
+    {
+      "source": "05-06-50-765Z",
+      "viewport": {
+        "width": 504,
+        "height": 920
+      },
+      "video": {
+        "width": 720,
+        "height": 1280
+      },
+      "handedness": "Left",
+      "landmarks": {
+        "0": {
+          "x": 0.37288,
+          "y": 0.88007,
+          "z": 0,
+          "worldX": -0.02069,
+          "worldY": 0.06504,
+          "worldZ": 0.00628
+        },
+        "5": {
+          "x": 0.74594,
+          "y": 0.53677,
+          "z": 0.19038,
+          "worldX": 0.00909,
+          "worldY": 0.00244,
+          "worldZ": 0.0016
+        },
+        "9": {
+          "x": 0.58087,
+          "y": 0.50446,
+          "z": 0.15791,
+          "worldX": 0.00002,
+          "worldY": -0.00157,
+          "worldZ": 0.00021
+        },
+        "13": {
+          "x": 0.42244,
+          "y": 0.50834,
+          "z": 0.12473,
+          "worldX": -0.00581,
+          "worldY": -0.00346,
+          "worldZ": -0.00164
+        },
+        "14": {
+          "x": 0.40898,
+          "y": 0.34622,
+          "z": 0.15772,
+          "worldX": -0.0076,
+          "worldY": -0.02024,
+          "worldZ": 0.00615
+        },
+        "17": {
+          "x": 0.28333,
+          "y": 0.54118,
+          "z": 0.09849,
+          "worldX": -0.01693,
+          "worldY": 0.00343,
+          "worldZ": 0.00338
+        }
+      },
+      "edges": {
+        "left": {
+          "x": 0.35518,
+          "y": 0.42399
+        },
+        "right": {
+          "x": 0.48637,
+          "y": 0.42055
+        },
+        "confidence": 0.92,
+        "support": 6
+      },
+      "raw": {
+        "x": 209.79732,
+        "y": 388.54509,
+        "width": 67.43244,
+        "orientation": [
+          -0.01755,
+          0.99332,
+          -0.05892,
+          -0.09763
+        ],
+        "fingerLength": 149.30838,
+        "handScale": 259.42733,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 211.86359,
+            "y": 467.6683
+          },
+          "tip": {
+            "x": 204.89617,
+            "y": 318.52258
+          },
+          "fraction": 0.53
+        }
+      },
+      "rendered": {
+        "x": 210.66386,
+        "y": 387.08299,
+        "width": 68.05065,
+        "orientation": [
+          -0.02381,
+          0.99546,
+          -0.0213,
+          -0.08963
+        ],
+        "fingerLength": 149.30838,
+        "handScale": 259.42733,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 211.86359,
+            "y": 467.6683
+          },
+          "tip": {
+            "x": 204.89617,
+            "y": 318.52258
+          },
+          "fraction": 0.53
+        }
+      },
+      "fit": {
+        "recoveryFrames": 0,
+        "fitRevision": 8,
+        "status": "accepted"
+      },
+      "trace": [
+        {
+          "time": 32197,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 1.0015,
+          "fitRevision": 8
+        },
+        {
+          "time": 32250,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.99153,
+          "fitRevision": 8
+        },
+        {
+          "time": 32299,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 1.01149,
+          "fitRevision": 8
+        },
+        {
+          "time": 32348,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.99968,
+          "fitRevision": 8
+        },
+        {
+          "time": 32402,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 1,
+          "fitRevision": 8
+        },
+        {
+          "time": 32451,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.99535,
+          "fitRevision": 8
+        },
+        {
+          "time": 32501,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.9866,
+          "fitRevision": 8
+        },
+        {
+          "time": 32550,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 1.01671,
+          "fitRevision": 8
+        },
+        {
+          "time": 32600,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.99837,
+          "fitRevision": 8
+        },
+        {
+          "time": 32653,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 1.00156,
+          "fitRevision": 8
+        },
+        {
+          "time": 32709,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.99997,
+          "fitRevision": 8
+        },
+        {
+          "time": 32758,
+          "rawWidth": 67.43244,
+          "width": 68.05065,
+          "skinScale": 0.97783,
+          "fitRevision": 8
+        }
+      ]
+    },
+    {
+      "source": "05-08-06-692Z",
+      "viewport": {
+        "width": 504,
+        "height": 920
+      },
+      "video": {
+        "width": 720,
+        "height": 1280
+      },
+      "handedness": "Left",
+      "landmarks": {
+        "0": {
+          "x": 0.34466,
+          "y": 0.95849,
+          "z": 0,
+          "worldX": -0.02074,
+          "worldY": 0.08145,
+          "worldZ": -0.01725
+        },
+        "5": {
+          "x": 0.78311,
+          "y": 0.60173,
+          "z": 0.29115,
+          "worldX": 0.01965,
+          "worldY": 0.00499,
+          "worldZ": -0.00276
+        },
+        "9": {
+          "x": 0.59968,
+          "y": 0.55986,
+          "z": 0.27754,
+          "worldX": 0.00169,
+          "worldY": -0.00272,
+          "worldZ": -0.00177
+        },
+        "13": {
+          "x": 0.41826,
+          "y": 0.55474,
+          "z": 0.27015,
+          "worldX": -0.0129,
+          "worldY": -0.00556,
+          "worldZ": 0.00125
+        },
+        "14": {
+          "x": 0.46458,
+          "y": 0.47325,
+          "z": 0.43114,
+          "worldX": -0.00671,
+          "worldY": -0.01988,
+          "worldZ": 0.02974
+        },
+        "17": {
+          "x": 0.24143,
+          "y": 0.5769,
+          "z": 0.26949,
+          "worldX": -0.03251,
+          "worldY": 0.00464,
+          "worldZ": 0.00967
+        }
+      },
+      "edges": {
+        "left": {
+          "x": 0.36602,
+          "y": 0.49774
+        },
+        "right": {
+          "x": 0.50205,
+          "y": 0.5222
+        },
+        "confidence": 0.4,
+        "support": 3
+      },
+      "raw": {
+        "x": 218.86577,
+        "y": 469.49297,
+        "width": 90.78047,
+        "orientation": [
+          0.12085,
+          0.86294,
+          -0.48791,
+          -0.0517
+        ],
+        "fingerLength": 78.71146,
+        "handScale": 228.48875,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 209.70105,
+            "y": 510.36004
+          },
+          "tip": {
+            "x": 233.66811,
+            "y": 435.38622
+          },
+          "fraction": 0.53
+        }
+      },
+      "rendered": {
+        "x": 218.21522,
+        "y": 468.71086,
+        "width": 89.02568,
+        "orientation": [
+          0.11641,
+          0.86647,
+          -0.48346,
+          -0.04398
+        ],
+        "fingerLength": 78.71146,
+        "handScale": 228.48875,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 209.70105,
+            "y": 510.36004
+          },
+          "tip": {
+            "x": 233.66811,
+            "y": 435.38622
+          },
+          "fraction": 0.53
+        }
+      },
+      "fit": {
+        "recoveryFrames": 0,
+        "fitRevision": 20,
+        "status": "uncertain"
+      },
+      "trace": [
+        {
+          "time": 107395,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1,
+          "fitRevision": 20
+        },
+        {
+          "time": 107446,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1,
+          "fitRevision": 20
+        },
+        {
+          "time": 107499,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1,
+          "fitRevision": 20
+        },
+        {
+          "time": 107555,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1,
+          "fitRevision": 20
+        },
+        {
+          "time": 107609,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99479,
+          "fitRevision": 20
+        },
+        {
+          "time": 107665,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99655,
+          "fitRevision": 20
+        },
+        {
+          "time": 107718,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99888,
+          "fitRevision": 20
+        },
+        {
+          "time": 107771,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99764,
+          "fitRevision": 20
+        },
+        {
+          "time": 107821,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1.00398,
+          "fitRevision": 20
+        },
+        {
+          "time": 107875,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 1.00948,
+          "fitRevision": 20
+        },
+        {
+          "time": 107927,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99688,
+          "fitRevision": 20
+        },
+        {
+          "time": 107980,
+          "rawWidth": 90.78047,
+          "width": 89.02568,
+          "skinScale": 0.99851,
+          "fitRevision": 20
+        }
+      ]
+    },
+    {
+      "source": "05-08-24-952Z",
+      "viewport": {
+        "width": 504,
+        "height": 920
+      },
+      "video": {
+        "width": 720,
+        "height": 1280
+      },
+      "handedness": "Left",
+      "landmarks": {
+        "0": {
+          "x": 0.42073,
+          "y": 0.91467,
+          "z": 0,
+          "worldX": -0.01821,
+          "worldY": 0.05985,
+          "worldZ": -0.008
+        },
+        "5": {
+          "x": 0.82429,
+          "y": 0.58512,
+          "z": 0.1649,
+          "worldX": 0.00824,
+          "worldY": 0.00074,
+          "worldZ": 0.0022
+        },
+        "9": {
+          "x": 0.65668,
+          "y": 0.54868,
+          "z": 0.13463,
+          "worldX": -0.00019,
+          "worldY": -0.00216,
+          "worldZ": 0.00136
+        },
+        "13": {
+          "x": 0.50028,
+          "y": 0.55196,
+          "z": 0.09902,
+          "worldX": -0.0047,
+          "worldY": -0.00252,
+          "worldZ": -0.00201
+        },
+        "14": {
+          "x": 0.49828,
+          "y": 0.38967,
+          "z": 0.11204,
+          "worldX": -0.00717,
+          "worldY": -0.0172,
+          "worldZ": 0.00571
+        },
+        "17": {
+          "x": 0.35799,
+          "y": 0.58677,
+          "z": 0.06774,
+          "worldX": -0.01629,
+          "worldY": 0.00407,
+          "worldZ": 0.00154
+        }
+      },
+      "edges": {
+        "left": {
+          "x": 0.41725,
+          "y": 0.46627
+        },
+        "right": {
+          "x": 0.55699,
+          "y": 0.46572
+        },
+        "confidence": 0.87962,
+        "support": 6
+      },
+      "raw": {
+        "x": 246.54626,
+        "y": 428.70565,
+        "width": 75.68487,
+        "orientation": [
+          -0.00113,
+          0.99453,
+          -0.02278,
+          -0.10195
+        ],
+        "fingerLength": 149.30373,
+        "handScale": 277.31433,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 252.14368,
+            "y": 507.79985
+          },
+          "tip": {
+            "x": 251.11221,
+            "y": 358.49968
+          },
+          "fraction": 0.53
+        }
+      },
+      "rendered": {
+        "x": 246.78919,
+        "y": 427.09512,
+        "width": 74.2424,
+        "orientation": [
+          0.02471,
+          0.99385,
+          -0.04034,
+          -0.10008
+        ],
+        "fingerLength": 149.30373,
+        "handScale": 277.31433,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 252.14368,
+            "y": 507.79985
+          },
+          "tip": {
+            "x": 251.11221,
+            "y": 358.49968
+          },
+          "fraction": 0.53
+        }
+      },
+      "fit": {
+        "recoveryFrames": 3,
+        "fitRevision": 25,
+        "status": "accepted"
+      },
+      "trace": [
+        {
+          "time": 122131,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.99727,
+          "fitRevision": 25
+        },
+        {
+          "time": 122185,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 1.0109,
+          "fitRevision": 25
+        },
+        {
+          "time": 122238,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.99087,
+          "fitRevision": 25
+        },
+        {
+          "time": 122292,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 1.00998,
+          "fitRevision": 25
+        },
+        {
+          "time": 122346,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.99726,
+          "fitRevision": 25
+        },
+        {
+          "time": 122400,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.9957,
+          "fitRevision": 25
+        },
+        {
+          "time": 122456,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.9972,
+          "fitRevision": 25
+        },
+        {
+          "time": 122509,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 1.00316,
+          "fitRevision": 25
+        },
+        {
+          "time": 122564,
+          "rawWidth": 71.80459,
+          "width": 72.46094,
+          "skinScale": 0.98237,
+          "fitRevision": 25
+        },
+        {
+          "time": 122617,
+          "rawWidth": 75.68487,
+          "width": 73.21493,
+          "skinScale": 1.01312,
+          "fitRevision": 25
+        },
+        {
+          "time": 122671,
+          "rawWidth": 75.68487,
+          "width": 73.80207,
+          "skinScale": 0.99999,
+          "fitRevision": 25
+        },
+        {
+          "time": 122725,
+          "rawWidth": 75.68487,
+          "width": 74.2424,
+          "skinScale": 0.99802,
+          "fitRevision": 25
+        }
+      ]
+    },
+    {
+      "source": "05-08-32-648Z",
+      "viewport": {
+        "width": 504,
+        "height": 920
+      },
+      "video": {
+        "width": 720,
+        "height": 1280
+      },
+      "handedness": "Left",
+      "landmarks": {
+        "0": {
+          "x": 0.14716,
+          "y": 0.87459,
+          "z": 0,
+          "worldX": -0.03099,
+          "worldY": 0.08619,
+          "worldZ": -0.00479
+        },
+        "5": {
+          "x": 0.19951,
+          "y": 0.38987,
+          "z": 0.09991,
+          "worldX": -0.02748,
+          "worldY": -0.01008,
+          "worldZ": 0.0026
+        },
+        "9": {
+          "x": 0.38747,
+          "y": 0.41187,
+          "z": 0.07917,
+          "worldX": -0.00404,
+          "worldY": -0.00597,
+          "worldZ": 0.00701
+        },
+        "13": {
+          "x": 0.54321,
+          "y": 0.46911,
+          "z": 0.03557,
+          "worldX": 0.0178,
+          "worldY": 0.00474,
+          "worldZ": -0.0009
+        },
+        "14": {
+          "x": 0.66159,
+          "y": 0.31584,
+          "z": 0.01864,
+          "worldX": 0.03152,
+          "worldY": -0.02268,
+          "worldZ": -0.0111
+        },
+        "17": {
+          "x": 0.67937,
+          "y": 0.55489,
+          "z": -0.019,
+          "worldX": 0.02682,
+          "worldY": 0.02349,
+          "worldZ": -0.00783
+        }
+      },
+      "edges": {
+        "left": {
+          "x": 0.51187,
+          "y": 0.36488
+        },
+        "right": {
+          "x": 0.65304,
+          "y": 0.39938
+        },
+        "confidence": 0.8,
+        "support": 6
+      },
+      "raw": {
+        "x": 298.61944,
+        "y": 353.27745,
+        "width": 64.08845,
+        "orientation": [
+          0.00042,
+          -0.00636,
+          -0.20349,
+          0.97906
+        ],
+        "fingerLength": 153.74045,
+        "handScale": 230.93106,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 274.36335,
+            "y": 431.57935
+          },
+          "tip": {
+            "x": 335.62315,
+            "y": 290.57097
+          },
+          "fraction": 0.53
+        }
+      },
+      "rendered": {
+        "x": 298.12441,
+        "y": 353.65793,
+        "width": 65.5915,
+        "orientation": [
+          0.00087,
+          -0.00586,
+          -0.20333,
+          0.97909
+        ],
+        "fingerLength": 153.74045,
+        "handScale": 230.93106,
+        "imageDepthScale": 517.5,
+        "fingerSegment": {
+          "base": {
+            "x": 274.36335,
+            "y": 431.57935
+          },
+          "tip": {
+            "x": 335.62315,
+            "y": 290.57097
+          },
+          "fraction": 0.53
+        }
+      },
+      "fit": {
+        "recoveryFrames": 1,
+        "fitRevision": 31,
+        "status": "uncertain"
+      },
+      "trace": [
+        {
+          "time": 134570,
+          "rawWidth": 108.5752,
+          "width": 108.55414,
+          "skinScale": 0.99767,
+          "fitRevision": 30
+        },
+        {
+          "time": 134624,
+          "rawWidth": 108.5752,
+          "width": 108.55414,
+          "skinScale": 1.01459,
+          "fitRevision": 30
+        },
+        {
+          "time": 134677,
+          "rawWidth": 79.38731,
+          "width": 98.67671,
+          "skinScale": 1.00357,
+          "fitRevision": 31
+        },
+        {
+          "time": 134731,
+          "rawWidth": 79.38731,
+          "width": 89.53674,
+          "skinScale": 0.99378,
+          "fitRevision": 31
+        },
+        {
+          "time": 134785,
+          "rawWidth": 79.38731,
+          "width": 83.05492,
+          "skinScale": 1.00629,
+          "fitRevision": 31
+        },
+        {
+          "time": 134838,
+          "rawWidth": 79.38731,
+          "width": 80.73786,
+          "skinScale": 1.00141,
+          "fitRevision": 31
+        },
+        {
+          "time": 134891,
+          "rawWidth": 79.38731,
+          "width": 79.88463,
+          "skinScale": 1.01272,
+          "fitRevision": 31
+        },
+        {
+          "time": 134944,
+          "rawWidth": 68.72907,
+          "width": 72.83697,
+          "skinScale": 0.99871,
+          "fitRevision": 31
+        },
+        {
+          "time": 134995,
+          "rawWidth": 63.9428,
+          "width": 67.34379,
+          "skinScale": 1.01761,
+          "fitRevision": 31
+        },
+        {
+          "time": 135047,
+          "rawWidth": 68.54454,
+          "width": 68.09396,
+          "skinScale": 0.99197,
+          "fitRevision": 31
+        },
+        {
+          "time": 135096,
+          "rawWidth": 68.54454,
+          "width": 68.09396,
+          "skinScale": 0.99929,
+          "fitRevision": 31
+        },
+        {
+          "time": 135148,
+          "rawWidth": 64.08845,
+          "width": 65.5915,
+          "skinScale": 0.98662,
+          "fitRevision": 31
+        }
+      ]
+    }
+  ]
+}

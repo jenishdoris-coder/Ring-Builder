@@ -291,7 +291,7 @@ const preserveLiveFrame = (canvas: HTMLCanvasElement) => {
 };
 
 /** Render product photos off-screen through the same metal/diamond pipeline. */
-export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal, options: { viewId?: string; resolution?: number; engraving?: { cameraPose: (camera: any) => RingCameraPose | undefined; position?: EngravingPosition } } = {}): Promise<RingPreviewImage[]> => {
+export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal, options: { viewId?: string; resolution?: number; engraving?: { cameraPose: (camera: any) => RingCameraPose | undefined; position?: EngravingPosition }; customView?: { id: string; label: string; cameraPose: (camera: any, roots: any[]) => RingCameraPose; beforeRender: (camera: any) => void; capture: (renderer: any, target: any) => string } } = {}): Promise<RingPreviewImage[]> => {
   const scene = viewer.scene;
   const renderer = viewer.renderer;
   const progressive = viewer.getPluginByType?.("Progressive");
@@ -354,16 +354,17 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
     // Resize every render target through WebGI, including the shared depth buffer.
     renderer.setSize(resolution / scale, resolution / scale, true);
     const images: RingPreviewImage[] = [];
-    for (const view of getRingPreviewViews(Boolean(options.engraving)).filter(view => !options.viewId || view.id === options.viewId)) {
+    const views = options.customView ? [{ ...RING_PREVIEW_VIEWS[0], id: options.customView.id, label: options.customView.label }] : getRingPreviewViews(Boolean(options.engraving)).filter(view => !options.viewId || view.id === options.viewId);
+    for (const view of views) {
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       // A user may expand the live canvas while the previous image decodes.
       renderer.setSize(resolution / scale, resolution / scale);
-      if (ground) ground.visible = view.id !== "engraving";
+      if (ground) ground.visible = view.id !== "engraving" && !options.customView;
       const bounds = stage.pose(view.lying);
-      if (view.id === "engraving" && ground?.mesh?.modelObject) ground.mesh.modelObject.visible = false;
+      if ((view.id === "engraving" || options.customView) && ground?.mesh?.modelObject) ground.mesh.modelObject.visible = false;
       const direction = new Vector3(...view.direction);
       const up = new Vector3(...view.up);
-      const engravingPose = view.id === "engraving" ? options.engraving?.cameraPose(camera.cameraObject) : undefined;
+      const engravingPose = options.customView?.cameraPose(camera.cameraObject, roots) ?? (view.id === "engraving" ? options.engraving?.cameraPose(camera.cameraObject) : undefined);
       if (engravingPose) {
         camera.cameraObject.clearViewOffset();
         camera.cameraObject.up.copy(engravingPose.up);
@@ -387,6 +388,7 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
           const [x, y] = samples[frame];
           camera.cameraObject.setViewOffset(projection.fullWidth, projection.fullHeight, projection.offsetX + x * projection.width / resolution, projection.offsetY + y * projection.height / resolution, projection.width, projection.height);
         }
+        options.customView?.beforeRender(camera.cameraObject);
         viewer.dispatchEvent({ type: "preRender", target: viewer });
         scene.renderCamera = camera;
         renderer.render(false);
@@ -395,7 +397,7 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
       }
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       const target = renderer.composer.readBuffer;
-      const url = await orientImage(renderer.renderTargetToDataUrl(target, "image/png"));
+      const url = await orientImage(options.customView ? options.customView.capture(renderer, target) : renderer.renderTargetToDataUrl(target, "image/png"));
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       images.push({ id: view.id, label: view.label, url, width: resolution, height: resolution, ...(view.id === "engraving" ? { engravingPosition: options.engraving?.position } : {}) });
     }

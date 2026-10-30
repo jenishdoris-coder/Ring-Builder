@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ModelThumbnail } from "./ModelThumbnail";
 import { assetUrl } from "../../config/assets";
 import type { RingCatalog } from "../../types/catalog";
@@ -18,13 +18,7 @@ export interface ConfiguratorPanelProps {
   engraving: EngravingSectionProps;
 }
 const shapeOrder = ["round", "princess", "cushion", "emerald", "pear", "oval", "radiant", "asscher", "marquise", "heart"];
-const customizationTabs = [
-  { id: "diamond", label: "Diamond" },
-  { id: "head", label: "Head" },
-  { id: "band", label: "Band" },
-  { id: "engraving", label: "Engraving" },
-] as const;
-type CustomizationTab = typeof customizationTabs[number]["id"];
+type CustomizationSection = "diamond" | "head" | "band" | "engraving";
 const MOBILE_BAND_PAGE_SIZE = 8;
 const MetalSelector = ({ part, selected, onSelect, metals }: { part: string; selected: string; onSelect: (id: string) => void; metals: RingCatalog["metals"] }) => {
   const current = metals.find(metal => metal.id === selected)!;
@@ -41,9 +35,8 @@ const MetalSelector = ({ part, selected, onSelect, metals }: { part: string; sel
 export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All styles");
-  const [activeTab, setActiveTab] = useState<CustomizationTab>("diamond");
   const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia("(max-width: 850px)").matches);
-  const [bandPage, setBandPage] = useState(() => Math.max(0, Math.floor(props.catalog.shanks.findIndex(item => item.id === props.selectedShankId) / MOBILE_BAND_PAGE_SIZE)));
+  const [bandPage, setBandPage] = useState(0);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 850px)");
     const update = () => setMobileLayout(media.matches);
@@ -66,23 +59,10 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
   const currentPage = Math.min(bandPage, pageCount - 1);
   const firstBand = currentPage * MOBILE_BAND_PAGE_SIZE;
   const visibleBands = mobileLayout ? bands.slice(firstBand, firstBand + MOBILE_BAND_PAGE_SIZE) : bands;
-  const panelProps = (id: CustomizationTab) => ({
+  const panelProps = (id: CustomizationSection) => ({
     id: `customization-panel-${id}`,
-    role: mobileLayout ? "tabpanel" : undefined,
-    "aria-labelledby": mobileLayout ? `customization-tab-${id}` : `${id}-heading`,
-    hidden: mobileLayout && activeTab !== id,
-    tabIndex: mobileLayout ? 0 : undefined,
+    "aria-labelledby": `${id}-heading`,
   });
-  const selectTabWithKey = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const index = customizationTabs.findIndex(tab => tab.id === activeTab);
-    const next = event.key === "ArrowRight" ? (index + 1) % customizationTabs.length
-      : event.key === "ArrowLeft" ? (index + customizationTabs.length - 1) % customizationTabs.length
-        : event.key === "Home" ? 0 : event.key === "End" ? customizationTabs.length - 1 : -1;
-    if (next < 0) return;
-    event.preventDefault();
-    setActiveTab(customizationTabs[next].id);
-    document.getElementById(`customization-tab-${customizationTabs[next].id}`)?.focus();
-  };
   return <aside id="ring-customization" className="product-configurator" aria-label="Ring Customizer">
     <div className="product-heading">
       <div className="product-eyebrow">Made personal. Made yours.</div>
@@ -91,10 +71,8 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
       <RingPrice catalog={props.catalog} selection={{ shapeId: shape.id, carat: head.carat, headStyleId: headStyleId(head), bandId: shank.id, headMetalId: headMetal.id, bandMetalId: shankMetal.id }} />
       <p className="product-intro">Build your setting. Explore every detail.</p>
     </div>
-    <div className="product-customization-tabs" role="tablist" aria-label="Customize your ring">
-      {customizationTabs.map(tab => <button key={tab.id} id={`customization-tab-${tab.id}`} type="button" role="tab"
-        aria-selected={activeTab === tab.id} aria-controls={`customization-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1}
-        onClick={() => setActiveTab(tab.id)} onKeyDown={selectTabWithKey}>{tab.label}</button>)}
+    <div className="product-customization-heading">
+      <div><span>Your design, your details</span><h2>Customize your ring</h2></div>
     </div>
     <section className="product-option-section product-customization-panel" {...panelProps("diamond")}>
       <h2 id="diamond-heading">Diamond preview <span className="section-information" title="Preview the available diamond shapes and sizes.">i</span></h2>
@@ -141,6 +119,6 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
       <div><dt>Band metal</dt><dd>{shankMetal.name}</dd></div><div><dt>Collection</dt><dd>{shank.category}</dd></div>
       {props.engraving.status === "ready" && props.engraving.applied.map(item => <div key={item.position}><dt>{item.position} engraving</dt><dd>{item.text}</dd></div>)}
     </dl></details>
-    <button type="button" className="product-reset-design" onClick={() => { props.onReset(); setSearch(""); setCategory("All styles"); setBandPage(Math.max(0, Math.floor(shanks.findIndex(item => item.id === props.catalog.defaults.shankId) / MOBILE_BAND_PAGE_SIZE))); }}>Reset design</button>
+    <button type="button" className="product-reset-design" onClick={() => { props.onReset(); setSearch(""); setCategory("All styles"); setBandPage(0); }}>Reset design</button>
   </aside>;
 };

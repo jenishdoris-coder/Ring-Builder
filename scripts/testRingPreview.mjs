@@ -177,6 +177,24 @@ failed.viewer.renderer.renderTargetToDataUrl = () => { throw new Error("readback
 await assert.rejects(preview.captureRingPreviews(failed.viewer, [root], new AbortController().signal), /readback failed/);
 failed.checkRestored();
 
+const portrait = makeViewer();
+let portraitSamples = 0, portraitExports = 0;
+const customView = {
+  id: "lifestyle-warm", label: "Warm portrait",
+  cameraPose: () => ({ position: new Vector3(2, 1, 20), target: new Vector3(2, 1, 0), up: new Vector3(0, 1, 0), minDistance: 1 }),
+  beforeRender: () => portraitSamples++,
+  capture: () => { portraitExports++; return "composited-portrait"; },
+};
+const [portraitImage] = await preview.captureRingPreviews(portrait.viewer, [root], new AbortController().signal, { customView });
+assert.equal(portraitImage.id, "lifestyle-warm");
+assert.equal(portraitImage.url, "composited-portrait", "portrait output comes from the final compositor, not the ordinary ring readback");
+assert.equal(portraitSamples, 2, "a portrait request renders only that photograph");
+assert.equal(portraitExports, 1);
+portrait.checkRestored();
+const failedPortrait = makeViewer();
+await assert.rejects(preview.captureRingPreviews(failedPortrait.viewer, [root], new AbortController().signal, { customView: { ...customView, capture: () => { throw new Error("portrait export failed"); } } }), /portrait export failed/);
+failedPortrait.checkRestored();
+
 // Imported assemblies can be under transformed WebGI scene parents.
 const parent = new Group();
 parent.position.set(2, 3, -4);

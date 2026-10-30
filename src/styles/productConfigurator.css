@@ -31,12 +31,11 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 @keyframes photo-loading-breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .product-photo-loading svg { animation: none; } }
 .product-configurator { padding: 2px 0 0; font-family: var(--product-font); min-width: 0; }
-.product-customization-tabs { display: none; }
+.product-customization-heading { display: none; }
 .product-draft-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 28px; background: #edf2f6; color: #4f627c; font: 11px var(--product-font); }
 .product-draft-banner a { color: inherit; white-space: nowrap; }
 .product-draft-banner.has-error { background: #fff1e9; color: #9b6a50; }
 .product-pricing-demo-banner { background: #f4efe4; color: #88734e; line-height: 1.6; }
-.product-customization-panel[hidden] { display: none; }
 .product-heading { padding-bottom: 29px; border-bottom: 1px solid var(--product-line); margin-bottom: 28px; }
 .product-ring-pricing { margin-top: 17px; }
 .product-ring-price strong { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.5px; color: #202b42; }
@@ -141,9 +140,6 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
   .product-heading h1 { font-size: 21px; margin-bottom: 9px; }
   .product-heading h1 > span { font-size: 17px; }
   .product-current-selection { margin: 0; }
-  .product-customization-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: sticky; top: 0; z-index: 8; padding: 8px 0; margin-bottom: 18px; background: #fffffff5; backdrop-filter: blur(12px); border-bottom: 1px solid #e7e8ed; }
-  .product-customization-tabs > button { min-height: 44px; padding: 8px 3px; border: 0; border-radius: 7px; background: transparent; color: #747986; font: 12px var(--product-font); }
-  .product-customization-tabs > button[aria-selected="true"] { background: #1d2947; color: #fff; }
   .product-customization-panel { scroll-margin-top: 76px; }
   .product-customization-panel.product-option-section { margin-bottom: 24px; }
   .product-customization-panel .product-option-section { margin-bottom: 24px; }
@@ -180,6 +176,10 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 .viewer-right-rail { position: absolute; z-index: 6; top: 0; right: 0; bottom: 0; width: var(--viewer-right-rail); display: grid; place-items: center; pointer-events: none; }
 .product-viewer-stage.is-hand-preview .viewer-right-rail { background: #fff; }
 .product-live-caption { position: absolute; z-index: 2; top: 17px; left: 62px; display: flex; align-items: center; gap: 7px; color: #74777e; font: 9px var(--product-font); pointer-events: none; }
+.viewer-preparing-status { position: absolute; z-index: 7; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1px solid #e5e7eb; border-radius: 24px; background: #fffffff2; box-shadow: 0 3px 14px #18223b0b; color: #546177; font: 11px var(--product-font); white-space: nowrap; pointer-events: none; }
+.viewer-preparing-status > span { width: 6px; height: 6px; border-radius: 50%; background: #b49965; animation: viewer-preparing-pulse 1.2s ease-in-out infinite; }
+@keyframes viewer-preparing-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .viewer-preparing-status > span { animation: none; } }
 .viewer-icon-controls { position: absolute; z-index: 6; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 3px; padding: 5px; border: 1px solid #e8e7e3; border-radius: 32px; background: #fffffff0; backdrop-filter: blur(12px); box-shadow: 0 3px 15px #2025300a; }
 .product-viewer-stage .viewer-icon-controls { left: 12px; top: 50%; bottom: auto; transform: translateY(-50%); flex-direction: column; gap: 4px; padding: 5px; border: 1px solid #e3e6eb; border-radius: 12px; background: #ffffffed; box-shadow: 0 3px 14px #18223b0b; }
 .product-viewer-stage .viewer-icon-controls > button { width: 30px; height: 30px; padding: 6px; border: 1px solid transparent; border-radius: 7px; color: #657083; background: transparent; }
@@ -243,6 +243,7 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 
 @media (max-width: 850px) {
   .product-viewer-stage:not(.is-expanded) .viewer-icon-controls, .product-viewer-stage.is-expanded .viewer-icon-controls { left: 50%; top: auto; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); flex-direction: row; gap: 3px; padding: 5px; max-width: calc(100% - 16px); border-radius: 14px; }
+  .viewer-preparing-status { bottom: max(78px, calc(env(safe-area-inset-bottom) + 68px)); }
   .product-viewer-stage:not(.is-expanded) .viewer-icon-controls > button, .product-viewer-stage.is-expanded .viewer-icon-controls > button { flex-shrink: 0; width: clamp(32px, 9vw, 42px); height: clamp(32px, 9vw, 42px); padding: 7px; border-radius: 8px; }
   .product-viewer-stage:not(.is-expanded) .viewer-icon-controls svg, .product-viewer-stage.is-expanded .viewer-icon-controls svg { width: 18px; height: 18px; }
   .product-viewer-stage .viewer-control-divider { width: 1px; height: 19px; margin: 0 3px; }
@@ -258,3 +259,92 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 @keyframes customization-cue-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes customization-cue-float { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); } }
 @media (prefers-reduced-motion: reduce) { .product-page .product-customization-scroll, .product-customization-scroll svg { animation: none; transition: none; } }
+
+.product-view-ring-floating { display: none; }
+
+/* One continuous mobile builder, with compact choices and a persistent route
+   back to the live ring instead of separate customization tabs. */
+@media (max-width: 850px) {
+  html:has(.product-page), body:has(.product-page) { scrollbar-width: none; -ms-overflow-style: none; }
+  html:has(.product-page)::-webkit-scrollbar, body:has(.product-page)::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .atelier-app-root.product-page { background: #f7f7f5; }
+  .product-layout { padding: 14px 16px 36px; gap: 22px; }
+  .product-gallery-grid { gap: 8px; }
+  .product-gallery-tile { border-color: #e5e7eb; border-radius: 13px; }
+  .product-live-tile { border-radius: 20px; }
+  #ring-gallery { scroll-margin-top: 12px; }
+  .product-configurator { max-width: 560px; padding: 0; }
+  .product-heading { margin: 0; padding: 22px 20px; background: #fff; border: 1px solid #e7e8e7; border-radius: 18px; }
+  .product-heading h1 { font-size: 23px; line-height: 1.28; letter-spacing: -.6px; margin-bottom: 12px; }
+  .product-heading h1 > span { display: inline-block; font-size: 17px; line-height: 1.45; letter-spacing: -.2px; color: #677082; margin-top: 5px; }
+  .product-current-selection { color: #747a84; font-size: 12px; line-height: 1.6; }
+  .product-ring-pricing { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 17px; border-top: 1px solid #eeefed; }
+  .product-ring-price { min-width: 0; }
+  .product-ring-price strong { font-size: 25px; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+  .product-ring-price > span { margin-top: 6px; font-size: 10px; }
+  .product-ring-size { flex-shrink: 0; display: grid; grid-template-columns: 1fr auto; gap: 7px 4px; margin: 0; font-size: 10px; }
+  .product-ring-size select { grid-column: 1 / -1; min-width: 80px; min-height: 44px; padding: 8px 12px; border-radius: 10px; font-size: 16px; }
+  .product-customization-heading { position: sticky; top: 0; z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 78px; padding: 14px 2px; background: #f7f7f5f5; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .product-customization-heading > div > span { display: block; margin-bottom: 5px; color: #969082; font-size: 8px; letter-spacing: 1.25px; text-transform: uppercase; }
+  .product-customization-heading h2 { margin: 0; color: #243149; font-size: 17px; font-weight: 600; letter-spacing: -.25px; }
+  .product-view-ring-floating { position: fixed; z-index: 25; right: 0; bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px)); display: block; width: calc(180px + env(safe-area-inset-right)); height: 50px; padding: 0; border: 1px solid #ffffff50; border-right: 0; border-radius: 30px 0 0 30px; background: #243149f5; color: #fff; box-shadow: 0 7px 25px #18253d30; font: 500 13px var(--product-font); opacity: 0; visibility: hidden; transform: translate3d(105%, 0, 0); pointer-events: none; transition: transform .7s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, width .55s cubic-bezier(.22, 1, .36, 1), height .55s cubic-bezier(.22, 1, .36, 1), border-radius .55s ease, visibility 0s linear .7s; }
+  .product-view-ring-floating.is-visible { opacity: 1; visibility: visible; transform: translate3d(0, 0, 0); pointer-events: auto; transition-delay: 0s; }
+  .product-view-ring-floating .product-view-ring-icon { position: absolute; left: 21px; top: 50%; width: 23px; height: 23px; transform: translateY(-50%); fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: left .55s cubic-bezier(.22, 1, .36, 1), transform .55s cubic-bezier(.22, 1, .36, 1), width .55s ease, height .55s ease; }
+  .product-view-ring-label { position: absolute; left: 54px; top: 50%; transform: translateY(-50%); white-space: nowrap; transition: opacity .2s ease, transform .3s ease; }
+  .product-view-ring-curve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: 0; transform: scale(.8); fill: currentColor; stroke: none; pointer-events: none; transition: opacity .2s ease, transform .4s ease; }
+  .product-view-ring-curve text { font: 500 9.5px var(--product-font); letter-spacing: .2px; }
+  .product-view-ring-floating.is-collapsed { width: 76px; height: 76px; border-radius: 40px 0 0 40px; }
+  .product-view-ring-floating.is-collapsed .product-view-ring-icon { left: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); }
+  .product-view-ring-floating.is-collapsed .product-view-ring-label { opacity: 0; transform: translate(10px, -50%); }
+  .product-view-ring-floating.is-collapsed .product-view-ring-curve { opacity: 1; transform: scale(1); transition-delay: .2s; }
+  .product-view-ring-floating:focus-visible { outline: 2px solid #bda26b; outline-offset: 3px; }
+  .product-page:has(.product-viewer-stage.is-expanded) .product-view-ring-floating { visibility: hidden; opacity: 0; pointer-events: none; }
+  .product-customization-panel { padding: 19px 16px; margin-bottom: 13px; border: 1px solid #e7e8e7; border-radius: 18px; background: #fff; scroll-margin-top: 86px; }
+  .product-customization-panel.product-option-section, .product-customization-panel .product-option-section { margin-bottom: 13px; }
+  .product-customization-panel .product-engraving { margin-bottom: 0; }
+  .product-customization-panel h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+  .product-selection-label, .product-size-selector legend, .product-metal-selector legend { font-size: 12px; line-height: 1.65; color: #777d87; margin-bottom: 12px; }
+  .product-option-grid { gap: 7px; }
+  .product-customization-panel .product-option-tile { min-height: 87px; padding: 10px 4px; border-radius: 10px; border-color: #e6e8ec; gap: 7px; }
+  .product-customization-panel .product-option-tile.selected, .product-metal-option.selected, .product-carat-options > button.selected { border-color: #25334f; background: #f6f7fa; box-shadow: inset 0 0 0 .5px #25334f; }
+  .product-option-tile > span:last-child { font-size: 11px; line-height: 1.35; }
+  .diamond-shape-image { width: 39px; height: 39px; }
+  .product-size-selector, .product-metal-selector { margin-top: 21px; }
+  .product-carat-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+  .product-carat-options > button { width: 100%; min-height: 44px; border-radius: 9px; font-size: 13px; }
+  .product-metal-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .product-metal-option { width: 100%; min-height: 73px; border-radius: 11px; border-color: #e6e8ec; padding: 10px 5px; gap: 8px; }
+  .product-metal-option > span:last-child { font-size: 10px; line-height: 1.35; text-align: center; }
+  .product-band-filters { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); margin: 13px 0; gap: 8px; }
+  .product-band-filters input, .product-band-filters select { min-height: 44px; padding: 8px 10px; border-radius: 9px; font-size: 16px; }
+  .product-band-filters input::placeholder { font-size: 11px; }
+  .product-customization-panel .product-bands .product-option-tile, .product-customization-panel .product-head-tile { min-height: 114px; padding: 5px 4px 10px; }
+  .product-customization-panel .option-model-image { height: 69px; }
+  .product-band-pagination { gap: 15px; margin-top: 15px; }
+  .product-band-pagination > button { width: 44px; height: 44px; border-radius: 11px; }
+  .product-band-pagination > span { font-size: 11px; }
+  .engraving-multiple-option { gap: 12px; padding: 0 0 16px; margin-bottom: 16px; }
+  .engraving-multiple-option small { line-height: 1.6; }
+  .engraving-position-options { gap: 7px; margin: 12px 0 20px; }
+  .engraving-position-option { border-radius: 11px; padding: 7px 3px 12px; overflow: hidden; }
+  .engraving-position-option > span { font-size: 12px; }
+  .engraving-position-option small { font-size: 9px; }
+  .engraving-position-example { height: 83px; }
+  .engraving-input-box { border-radius: 11px; gap: 4px; }
+  .engraving-input-box input { min-height: 44px; font-size: 16px; padding: 9px 6px; }
+  .engraving-input-box input::placeholder { font-size: 10px; }
+  .engraving-input-box button { min-height: 44px; padding: 10px 13px; border-radius: 8px; font-size: 11px; }
+  .engraving-applied { padding: 12px; border-radius: 11px; font-size: 11px; }
+  .product-details { margin: 0 0 13px; padding: 19px 17px; border: 1px solid #e7e8e7; border-radius: 16px; background: #fff; }
+  .product-details summary { font-size: 14px; }
+  .product-reset-design { min-height: 46px; border-radius: 12px; border-color: #d8dde5; color: #617087; font-size: 12px !important; background: transparent; }
+  .product-reset-design { margin-bottom: 70px; }
+}
+@media (prefers-reduced-motion: reduce) { .product-view-ring-floating, .product-view-ring-floating * { transition: none !important; } }
+@media (max-width: 360px) {
+  .product-layout { padding-left: 10px; padding-right: 10px; }
+  .product-heading { padding: 20px 16px; }
+  .product-customization-panel { padding-left: 12px; padding-right: 12px; }
+  .product-heading h1 { font-size: 22px; }
+  .product-ring-price strong { font-size: 23px; }
+}

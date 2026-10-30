@@ -10,6 +10,7 @@ export interface EngravingSectionProps {
   applied: RingEngravingConfig[];
   status: EngravingStatus;
   busy: boolean;
+  queued?: boolean;
   onTextChange: (position: EngravingPosition, text: string) => void;
   onPositionChange: (position: EngravingPosition) => void;
   onMultipleChange: (enabled: boolean) => void;
@@ -50,7 +51,7 @@ export const EngravingSection = (props: EngravingSectionProps) => <section class
         </div>
         <div id={`engraving-help-${position}`} className={`engraving-input-help ${tooLong ? "has-error" : ""}`}><span>{tooLong ? error : "Letters, numbers and symbols"}</span><span>{Array.from(text).length}/{ENGRAVING_MAX_CHARACTERS}</span></div>
       </form>
-      {applied && <div className="engraving-applied" role="status"><span>{props.status === "unavailable" ? "No continuous inner surface here. Try another position." : <>“{applied.text}” · {label} inside</>}</span><button type="button" aria-label={`Remove ${position} engraving`} disabled={props.busy} onClick={() => props.onRemove(position)}>Remove</button></div>}
+      {applied && <div className="engraving-applied" role="status"><span>{props.queued ? <>“{applied.text}” · Ready to preview</> : props.status === "unavailable" ? "No continuous inner surface here. Try another position." : <>“{applied.text}” · {label} inside</>}</span><button type="button" aria-label={`Remove ${position} engraving`} disabled={props.busy} onClick={() => props.onRemove(position)}>Remove</button></div>}
     </div>;
   })}</div>
 </section>;

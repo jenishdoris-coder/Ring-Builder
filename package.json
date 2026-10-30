@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Photorealistic Three.js diamond ring head renderer",
   "type": "module",
+  "workspaces": ["ar"],
   "scripts": {
     "dev": "vite",
     "dev:host": "vite --host",
+    "dev:secure": "node scripts/dev-secure.mjs",
     "screenshots:inbox": "node scripts/screenshot-inbox.mjs",
     "admin:setup": "node scripts/setup-admin.mjs",
     "admin:cors": "node scripts/admin-upload-cors.mjs",
@@ -22,6 +24,8 @@
     "cloud:check": "node scripts/cloud-preflight.mjs",
     "cloud:sync": "node scripts/cloud-sync.mjs",
     "check": "tsc --noEmit",
+    "test:pricing-request": "node --test scripts/testRingQuote.mjs",
+    "test:ar": "npm test --workspace @ring-builder/ar",
     "prepare:vercel": "node scripts/prepare-vercel-upload.mjs",
     "test:deployment": "node scripts/verify-deployment.mjs"
   },

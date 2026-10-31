@@ -1,0 +1,23 @@
+.hand-fit-page { display: grid; grid-template-columns: minmax(0, 1fr) 320px; min-height: 100dvh; color: #25334b; font: 13px/1.5 "Segoe UI", sans-serif; background: #f6f7f9; }
+body:has(.hand-fit-page) { overflow: auto; }
+#canvas-container:has(.hand-fit-page) { position: relative; height: auto; }
+.hand-fit-canvas { position: sticky; top: 0; height: 100dvh; min-width: 0; background: white; overflow: hidden; }
+.hand-fit-canvas > .viewer-page { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; }
+.hand-fit-hint { position: absolute; top: 20px; left: 20px; color: #7d8696; font-size: 11px; pointer-events: none; }
+.hand-fit-reframe { position: absolute; bottom: 20px; left: 20px; }
+.hand-fit-panel { padding: 24px; border-left: 1px solid #e5e8ef; background: #fff; }
+.hand-fit-panel h1 { font-size: 23px; font-weight: 500; margin: 20px 0 8px; }
+.hand-fit-panel p { color: #7d8696; font-size: 12px; }
+.hand-fit-panel a { color: #25334b; }
+.hand-fit-panel .hand-fit-photo-link { margin-left: 12px; font-size: 11px; }
+.hand-fit-panel label { display: block; margin: 18px 0; }
+.hand-fit-panel select, .hand-fit-panel textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 7px; padding: 8px; border: 1px solid #e0e5ec; border-radius: 7px; background: white; color: inherit; }
+.hand-fit-panel textarea { font: 11px/1.6 monospace; resize: vertical; }
+.hand-fit-range > span { display: flex; align-items: center; justify-content: space-between; }
+.hand-fit-range output { font-variant-numeric: tabular-nums; color: #7d8696; }
+.hand-fit-range input[type="range"] { width: calc(100% - 69px); margin: 12px 8px 0 0; accent-color: #25334b; vertical-align: middle; }
+.hand-fit-range input[type="number"] { box-sizing: border-box; width: 58px; padding: 4px; border: 1px solid #e0e5ec; border-radius: 5px; color: inherit; }
+.hand-fit-page button { border: 1px solid #e0e5ec; border-radius: 7px; padding: 9px 12px; background: #fff; color: inherit; cursor: pointer; }
+.hand-fit-actions { display: flex; gap: 8px; margin-top: 25px; }
+.hand-fit-actions button:last-child { background: #25334b; color: white; }
+@media (max-width: 750px) { .hand-fit-page { display: block; } .hand-fit-canvas { z-index: 2; height: 62dvh; border-bottom: 1px solid #e5e8ef; } .hand-fit-panel { padding: 20px; } }

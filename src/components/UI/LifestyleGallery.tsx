@@ -4,7 +4,8 @@ import type { RingPreviewImage } from "../../utils/ringPreview";
 import type { ImageOrigin } from "./ImageLightbox";
 import "../../styles/lifestyleGallery.css";
 
-export const LifestyleGallery = ({ designKey, images, pending, onVisibleChange, onOpen, onRetry }: {
+export const LifestyleGallery = ({ designKey, images, pending, onVisibleChange, onOpen, onRetry, embedded = false }: {
+  embedded?: boolean;
   designKey: string; images: Record<string, RingPreviewImage | null>; pending: boolean;
   onVisibleChange: (visible: boolean) => void;
   onOpen: (image: RingPreviewImage, origin: ImageOrigin) => void;
@@ -12,34 +13,28 @@ export const LifestyleGallery = ({ designKey, images, pending, onVisibleChange, 
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 850px)").matches);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 850px)");
-    const change = () => setMobile(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
+  const [decoded, setDecoded] = useState<Record<string, string>>({});
   useEffect(() => {
     const list = listRef.current;
-    if (!list || mobile && !open) { onVisibleChange(false); return; }
-    const observer = new IntersectionObserver(entries => onVisibleChange(entries.some(entry => entry.isIntersecting)), { threshold: .01 });
-    observer.observe(list);
+    if (!list) return;
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) visible.add(entry.target); else visible.delete(entry.target); }); onVisibleChange(visible.size > 0); }, { threshold: .01 });
+    list.querySelectorAll('.lifestyle-portrait').forEach(card => observer.observe(card));
     return () => { observer.disconnect(); onVisibleChange(false); };
-  }, [mobile, open, onVisibleChange]);
-  return <section className={`lifestyle-gallery ${open ? "is-open" : ""}`} ref={ref} aria-label="Your ring on a model">
-    {mobile && <button type="button" className="lifestyle-gallery-heading" aria-expanded={open} aria-controls="lifestyle-portraits" onClick={() => setOpen(value => !value)}>
-      <span><strong>See your ring on a model</strong><small>Two portraits · swipe to explore</small></span>
-      <svg viewBox="0 0 24 24" aria-hidden="true" className={open ? "is-up" : ""}><path d="m7 10 5 5 5-5" /></svg>
-    </button>}
-    <div className="lifestyle-portraits" id="lifestyle-portraits" ref={listRef} hidden={mobile && !open}>
+  }, [embedded, onVisibleChange]);
+  return <section className={`lifestyle-gallery ${embedded ? "is-embedded" : ""}`} ref={ref} aria-label="Your ring on a model">
+    <div className="lifestyle-portraits" id="lifestyle-portraits" ref={listRef}>
       {LIFESTYLE_PHOTOS.map(photo => {
         const image = images[`${designKey}:${photo.id}`];
-        return <figure key={photo.id} className={`lifestyle-portrait ${!image || pending ? "is-refreshing" : ""}`} aria-busy={image === undefined || pending}>
-          <button type="button" disabled={!image || pending} aria-label={`Enlarge ${photo.label.toLowerCase()}`} onClick={event => { if (!image) return; const rect = event.currentTarget.getBoundingClientRect(); onOpen(image, { left: rect.left, top: rect.top, width: rect.width, height: rect.height }); }}>
-            <img src={image?.url ?? photo.image} alt={image ? `Your selected ring worn in the ${photo.label.toLowerCase()}` : ""} loading="lazy" /><span className="lifestyle-expand" aria-hidden="true">⤢</span>
+        const ready = Boolean(image && decoded[photo.id] === image.url);
+        const preparing = image !== null && (!ready || pending);
+        const placeholderX = photo.flipX ? photo.crop.left + photo.crop.size : -photo.crop.left;
+        return <figure key={photo.id} className={`lifestyle-portrait ${preparing ? "is-refreshing" : ""}`} aria-busy={preparing}>
+          <button type="button" disabled={!ready || pending} aria-label={`Enlarge ${photo.label.toLowerCase()}`} onClick={event => { if (!image) return; const rect = event.currentTarget.getBoundingClientRect(); onOpen(image, { left: rect.left, top: rect.top, width: rect.width, height: rect.height }); }}>
+            {image && <img className={`lifestyle-generated-image ${ready && !pending ? "is-ready" : ""}`} src={image.url} onLoad={() => setDecoded(current => ({ ...current, [photo.id]: image.url }))} alt={`Your selected ring worn in the ${photo.label.toLowerCase()}`} loading="lazy" decoding="async" />}
+            <img className="lifestyle-base-image" src={photo.image} style={{ width: `${100 / photo.crop.size}%`, height: `${100 / photo.crop.size}%`, maxWidth: "none", transformOrigin: "0 0", transform: `translate(${placeholderX * 100}%, ${-photo.crop.top * 100}%) scaleX(${photo.flipX ? -1 : 1})` }} alt="" aria-hidden="true" loading="lazy" decoding="async" /><span className="lifestyle-expand" aria-hidden="true">⤢</span>
           </button>
-          {!image && <div className="lifestyle-portrait-status">{image === null ? <button type="button" onClick={() => onRetry(photo.id)}>Retry model preview</button> : <span>Preparing your model preview</span>}</div>}
+          <div className={`lifestyle-portrait-status ${preparing || image === null ? "is-active" : ""}`} aria-hidden={!preparing && image !== null}>{image === null ? <button type="button" onClick={() => onRetry(photo.id)}>Retry model preview</button> : <span className="lifestyle-loading-pill" role="status"><svg viewBox="0 0 32 32" aria-hidden="true"><circle className="lifestyle-loader-orbit" cx="16" cy="19" r="9" /><path d="m10 6 3-3h6l3 3-6 7Zm0 0h12M13 3l3 10 3-10" /></svg><span>Preparing preview</span></span>}</div>
           <figcaption>{photo.label}</figcaption>
         </figure>;
       })}

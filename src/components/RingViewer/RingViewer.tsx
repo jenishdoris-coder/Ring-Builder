@@ -121,13 +121,14 @@ import {
   type RingDissolveTransition,
 } from "../../utils/ringDissolve";
 import { alignRingHeadToShank } from "../../utils/ringAssembly";
-import { captureRingPreviews, type RingPreviewImage, type RingDetailPreviewRequest } from "../../utils/ringPreview";
+import { captureRingPreviews, runRingImageJob, type RingPreviewImage, type RingDetailPreviewRequest } from "../../utils/ringPreview";
 import { getRingCameraPose, type RingCameraView } from "../../utils/ringCameraViews";
 import { HandPreview } from "../../utils/handPreview";
 import { isLifestyleView } from "../../config/lifestylePhotos";
 import { MultiRingEngraving as RingEngraving } from "../../utils/ringEngraving";
 import type { EngravingPosition, EngravingStatus, RingEngravingConfig } from "../../config/engraving";
 import { DEFAULT_SKIN_TONE } from "../../config/skinTones";
+import type { HandFitAdjustments } from "../../config/handFit";
 import { holdViewerFrame, clearViewerFrames, waitForCompleteRingFrame, waitForViewerPresentation } from "../../utils/viewerFrame";
 import { DampedRingZoom } from "../../utils/ringZoom";
 
@@ -156,6 +157,7 @@ export interface RingViewerProps {
   isAutoRotating?: boolean;
   paused?: boolean;
   handSkinTone?: number;
+  handFitAdjustments?: HandFitAdjustments;
   onLoadingChange?: (loading: boolean) => void;
   ringTransform?: RingTransform;
   engraving?: RingEngravingConfig[];
@@ -213,6 +215,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
   const loadIdRef = useRef(0);
   const previewCaptureRef = useRef<AbortController | null>(null);
+  const detailJobsRef = useRef(new Map<string, AbortController>());
+  const pausedRef = useRef(props.paused === true);
+  pausedRef.current = props.paused === true;
   const previewCacheRef = useRef(new Map<string, RingPreviewImage[]>());
   const detailPreviewCacheRef = useRef(new Map<string, RingPreviewImage>());
   const initializeRingCameraRef = useRef<(() => Promise<void>) | null>(null);
@@ -240,6 +245,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const appliedCameraRequestRef = useRef("");
   const [handPreviewStatus, setHandPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const handSkinToneRef = useRef(props.handSkinTone ?? DEFAULT_SKIN_TONE);
+  const handFitAdjustmentsRef = useRef(props.handFitAdjustments);
+  handFitAdjustmentsRef.current = props.handFitAdjustments;
   handSkinToneRef.current = props.handSkinTone ?? DEFAULT_SKIN_TONE;
   const cameraControlsRef = useRef<any>(null);
   const controlsLockDepthRef = useRef(0);
@@ -424,7 +431,10 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   }, [updateRingRotation, updateRingPosition]);
 
   const setViewerControlsEnabled = useCallback((enabled: boolean) => {
-    viewerInputLockedRef.current = !enabled;
+    // Visibility is independent of ownership of the renderer. Pausing while a
+    // capture owns the lock must never create a permanent logical input lock.
+    viewerInputLockedRef.current = controlsLockDepthRef.current > 0;
+    enabled = enabled && !pausedRef.current && !viewerInputLockedRef.current;
     if (!enabled) zoomRef.current.stop();
 
     const camera =
@@ -504,10 +514,15 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     if (cached) { request.callback(key, cached); return; }
     const controller = new AbortController();
     previewCaptureRef.current = controller;
-    handPreviewRef.current?.suspend();
     try {
       const position = engravingPhotoPositionRef.current;
-      const images = await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal, { engraving: engraving && { position, cameraPose: camera => engraving.cameraPose(camera, position, "photo") } });
+      const images = await runRingImageJob(viewer, controller.signal, async () => {
+        const renderEnabled = viewer.renderEnabled;
+        viewer.renderEnabled = false;
+        handPreviewRef.current?.suspend();
+        try { return await captureRingPreviews(viewer, [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible), controller.signal, { engraving: engraving && { position, cameraPose: camera => engraving.cameraPose(camera, position, "photo") } }); }
+        finally { if (viewerRef.current === viewer) { viewer.renderEnabled = renderEnabled; viewer.setDirty(); } }
+      });
       if (!controller.signal.aborted && viewer === viewerRef.current && key === previewRequestRef.current.key && images.length === 3) {
         if (previewCacheRef.current.size >= 6) previewCacheRef.current.delete(previewCacheRef.current.keys().next().value!);
         previewCacheRef.current.set(key, images);
@@ -1523,14 +1538,18 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       } catch (error) {
         console.error("Load error:", error);
       } finally {
-        if (
-          loadId === loadIdRef.current && viewer === viewerRef.current &&
-          initialRevealDoneRef.current && previewRequest.key && previewRequest.callback &&
-          currentHeadFileRef.current === headData?.file && currentShankFileRef.current === shankData?.file
-        ) {
-          await refreshGallery(viewer, previewRequest);
+        try {
+          if (
+            loadId === loadIdRef.current && viewer === viewerRef.current &&
+            initialRevealDoneRef.current && previewRequest.key && previewRequest.callback &&
+            currentHeadFileRef.current === headData?.file && currentShankFileRef.current === shankData?.file
+          ) {
+            await refreshGallery(viewer, previewRequest);
+          }
+        } finally {
+          // Even a photo-preparation failure must release the model's lock.
+          unlockViewerControls();
         }
-        unlockViewerControls();
         if (!viewerInputLockedRef.current && loadId === loadIdRef.current) handPreviewRef.current?.resume(currentShankRef.current);
         if (!viewerInputLockedRef.current && pendingCameraViewRef.current) {
           const pendingView = pendingCameraViewRef.current;
@@ -1667,6 +1686,14 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       viewerRef.current = viewer;
       (window as any).__viewer = viewer;
       (window as any).__ringRefs = { currentHeadRef, currentShankRef };
+      cleanupStack.push(() => {
+        if (viewerRef.current !== viewer) return;
+        disposeEnvironmentAsset(metalEnvironmentAssetRef.current);
+        metalEnvironmentAssetRef.current = null;
+        disposeEnvironmentAsset(diamondEnvironmentAssetRef.current);
+        diamondEnvironmentAssetRef.current = null;
+        applyCustomEnvironmentRef.current = null;
+      });
 
       const getOrAddPlugin = async (Plugin: any, instance?: any) => {
         const existing = viewerAny.getPlugin(Plugin);
@@ -1872,6 +1899,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             if (requestId !== cameraRequestRef.current || viewerRef.current !== viewer) return false;
             if (previewCaptureRef.current || viewerInputLockedRef.current) { pendingCameraViewRef.current = name; return false; }
             hand.show(currentShankRef.current);
+            hand.setFitAdjustments(handFitAdjustmentsRef.current, currentShankRef.current);
             hand.setSkinTone(handSkinToneRef.current);
             handPose = hand.cameraPose(activeCamera);
             handPose.minDistance = Math.max(0.3, handPose.position.distanceTo(handPose.target) * 0.08);
@@ -2307,21 +2335,14 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
           headMetalHex || undefined,
           shankMetalHex || undefined,
         );
+        if (!isMounted || viewerRef.current !== viewer) return;
         setIsViewerReady(true);
         props.onLoadingChange?.(false);
       }
 
-      cleanupStack.push(() => {
-        disposeEnvironmentAsset(metalEnvironmentAssetRef.current);
-        metalEnvironmentAssetRef.current = null;
-        disposeEnvironmentAsset(diamondEnvironmentAssetRef.current);
-        diamondEnvironmentAssetRef.current = null;
-        applyCustomEnvironmentRef.current = null;
-        viewer.dispose?.();
-      });
     };
 
-    init();
+    void init().catch(error => { if (isMounted) console.error("Ring viewer initialization failed", error); });
 
     return () => {
       isMounted = false;
@@ -2476,26 +2497,36 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     const viewer = viewerRef.current;
     if (!viewer) return;
     const controller = new AbortController();
-    const cacheKey = `${request.key}:${request.viewId}:${request.resolution}:${request.engravingPosition ?? ""}`;
+    const cacheKey = `${request.key}:${request.viewId}:${request.resolution}:${request.engravingPosition ?? ""}:${JSON.stringify(request.portraitFit ?? null)}:${JSON.stringify(request.environment ?? null)}`;
     const cached = detailPreviewCacheRef.current.get(cacheKey);
     if (cached) {
       props.onDetailPreviewChange?.(request, cached);
       return;
     }
+    if (detailJobsRef.current.has(cacheKey)) return;
+    detailJobsRef.current.set(cacheKey, controller);
     const renderDetail = async () => {
+      // Give opening/zoom gestures priority over the shared WebGL context.
+      await new Promise(resolve => setTimeout(resolve, 450));
       while (!controller.signal.aborted && viewerRef.current === viewer && (viewerInputLockedRef.current || previewCaptureRef.current || cameraTweenRef.current)) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
-      if (controller.signal.aborted || viewerRef.current !== viewer) return;
+      if (controller.signal.aborted || viewerRef.current !== viewer) { if (detailJobsRef.current.get(cacheKey) === controller) detailJobsRef.current.delete(cacheKey); return; }
       lockViewerControls();
       previewCaptureRef.current = controller;
-      handPreviewRef.current?.suspend();
       try {
-        const roots = [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible);
-        const engraving = engravingRef.current;
-        const image = isLifestyleView(request.viewId)
-          ? await (await import("../../utils/lifestylePreview")).captureLifestylePreview(viewer, roots, request.viewId, request.resolution, controller.signal)
-          : (await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition, "photo") } : undefined }))[0];
+        const image = await runRingImageJob(viewer, controller.signal, async () => {
+          const renderEnabled = viewer.renderEnabled;
+          viewer.renderEnabled = false;
+          handPreviewRef.current?.suspend();
+          const roots = [currentHeadRef.current, currentShankRef.current, ...currentBandRefs.current].filter(root => root?.visible);
+          const engraving = engravingRef.current;
+          try {
+            return isLifestyleView(request.viewId)
+              ? await (await import("../../utils/lifestylePreview")).captureLifestylePreview(viewer, roots, request.viewId, request.resolution, controller.signal, request.portraitFit, request.environment, managerRef.current?.importer)
+              : (await captureRingPreviews(viewer, roots, controller.signal, { viewId: request.viewId, resolution: request.resolution, engraving: engraving?.active ? { position: request.engravingPosition, cameraPose: camera => engraving.cameraPose(camera, request.engravingPosition, "photo") } : undefined }))[0];
+          } finally { if (viewerRef.current === viewer) { viewer.renderEnabled = renderEnabled; viewer.setDirty(); } }
+        });
         if (!controller.signal.aborted && viewerRef.current === viewer) {
           if (image) {
             if (detailPreviewCacheRef.current.size >= 3) detailPreviewCacheRef.current.delete(detailPreviewCacheRef.current.keys().next().value!);
@@ -2509,6 +2540,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
           props.onDetailPreviewChange?.(request, null);
         }
       } finally {
+        if (detailJobsRef.current.get(cacheKey) === controller) detailJobsRef.current.delete(cacheKey);
         if (previewCaptureRef.current === controller) previewCaptureRef.current = null;
         if (viewerRef.current === viewer) {
           unlockViewerControls();
@@ -2522,27 +2554,27 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       }
     };
     void renderDetail();
-    return () => controller.abort();
-  }, [isViewerReady, props.previewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
+    // Scroll, pinch and lightbox state may temporarily remove this request.
+    // Finish an already scheduled job; model changes/unmount cancel it below.
+  }, [isViewerReady, props.previewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, JSON.stringify(props.detailPreviewRequest?.portraitFit), JSON.stringify(props.detailPreviewRequest?.environment), props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
+
+  useEffect(() => () => {
+    for (const controller of detailJobsRef.current.values()) controller.abort();
+    detailJobsRef.current.clear();
+  }, [props.previewKey]);
 
   // The studio stays mounted so its selected angle, models and photos survive
   // try-on. Stop its RAF and image work while the camera owns the GPU.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!isViewerReady || !viewer || !props.paused) return;
-    const wasEnabled = viewer.enabled;
-    const inputEnabled = !viewerInputLockedRef.current;
-    const tween = cameraTweenRef.current;
-    previewCaptureRef.current?.abort();
     zoomRef.current.stop();
-    tween?.pause();
     setViewerControlsEnabled(false);
     viewer.enabled = false;
     return () => {
       if (viewerRef.current !== viewer) return;
-      viewer.enabled = wasEnabled;
-      setViewerControlsEnabled(inputEnabled);
-      tween?.resume();
+      viewer.enabled = !pausedRef.current;
+      setViewerControlsEnabled(controlsLockDepthRef.current === 0);
       viewer.setDirty();
     };
   }, [isViewerReady, props.paused, setViewerControlsEnabled]);
@@ -2564,6 +2596,10 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   useEffect(() => {
     handPreviewRef.current?.setSkinTone(props.handSkinTone ?? DEFAULT_SKIN_TONE);
   }, [props.handSkinTone]);
+
+  useEffect(() => {
+    handPreviewRef.current?.setFitAdjustments(props.handFitAdjustments, currentShankRef.current);
+  }, [props.handFitAdjustments]);
 
   useEffect(() => {
     const controls =

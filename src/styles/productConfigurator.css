@@ -200,8 +200,10 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 .viewer-close-expanded, .product-image-frame > button { position: absolute; z-index: 8; top: 17px; right: 17px; display: grid; place-items: center; width: 34px; height: 34px; padding: 8px; border: 1px solid #e6e7e9; border-radius: 50%; color: #444c5b; background: #fffffff0; }
 .viewer-close-expanded svg, .product-image-frame > button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .product-image-lightbox { display: grid; place-items: center; z-index: 110; }
-.product-image-frame { position: relative; width: 80vw; height: 80dvh; overflow: hidden; border-radius: 24px; background: #fff; border: 1px solid #ffffffd9; box-shadow: 0 24px 100px #1219233b; }
+.product-image-frame { position: relative; width: min(90vw, 84dvh); height: min(90vw, 84dvh); overflow: hidden; border-radius: 24px; background: #fff; border: 1px solid #ffffffd9; box-shadow: 0 24px 100px #1219233b; }
 .product-image-frame { transform-origin: center; will-change: transform; }
+.product-image-frame.is-lifestyle { width: min(94vw, 88dvh); height: min(94vw, 88dvh); }
+.product-image-frame.is-lifestyle .product-image-viewport > img { object-fit: cover; background: transparent; }
 .product-image-viewport { position: absolute; inset: 0; overflow: hidden; background: #fff; touch-action: none; cursor: zoom-in; user-select: none; }
 .product-image-viewport.is-zoomed { cursor: grab; }
 .product-image-viewport.is-zoomed.is-dragging { cursor: grabbing; }
@@ -209,6 +211,7 @@ body #canvas-container { position: relative; width: 100%; height: auto; min-heig
 .product-image-viewport.is-engraving { display: flex; align-items: center; justify-content: center; }
 .product-image-viewport.is-engraving > img { flex: 0 0 100%; height: auto; aspect-ratio: 1; }
 .product-image-viewport.is-dragging > img { transition: none; }
+.hand-appearance-controls { display: grid; justify-items: center; gap: 9px; pointer-events: auto; }
 .product-image-zoom-hint { position: absolute; top: 24px; left: 24px; z-index: 5; color: #7c8088; font: 10px var(--product-font); pointer-events: none; }
 .product-image-detail-status { position: absolute; z-index: 5; bottom: 76px; left: 50%; transform: translateX(-50%); padding: 7px 11px; border: 1px solid #eceef1; border-radius: 20px; background: #fffffff0; color: #747b87; font: 10px var(--product-font); pointer-events: none; }
 .product-image-zoom-controls { bottom: 20px; }

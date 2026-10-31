@@ -1,0 +1,262 @@
+[
+  {
+    "name": "Metal Env 1",
+    "url": "/environments/metal-test/Metal%20Env%201.hdr"
+  },
+  {
+    "name": "Metal Env 2",
+    "url": "/environments/metal-test/Metal%20Env%202.exr"
+  },
+  {
+    "name": "Metal Env 3",
+    "url": "/environments/metal-test/Metal%20Env%203.hdr"
+  },
+  {
+    "name": "Metal Env 4",
+    "url": "/environments/metal-test/Metal%20Env%204.hdr"
+  },
+  {
+    "name": "Metal Env 5",
+    "url": "/environments/metal-test/Metal%20Env%205.hdr"
+  },
+  {
+    "name": "Metal Env 6",
+    "url": "/environments/metal-test/Metal%20Env%206.hdr"
+  },
+  {
+    "name": "Metal Env 7",
+    "url": "/environments/metal-test/Metal%20Env%207.hdr"
+  },
+  {
+    "name": "Metal Env 8",
+    "url": "/environments/metal-test/Metal%20Env%208.exr"
+  },
+  {
+    "name": "Metal Env 9",
+    "url": "/environments/metal-test/Metal%20Env%209.exr"
+  },
+  {
+    "name": "Metal Env 10",
+    "url": "/environments/metal-test/Metal%20Env%2010.exr"
+  },
+  {
+    "name": "Metal Env 11",
+    "url": "/environments/metal-test/Metal%20Env%2011.exr"
+  },
+  {
+    "name": "Metal Env 12",
+    "url": "/environments/metal-test/Metal%20Env%2012.exr"
+  },
+  {
+    "name": "Metal Env 13",
+    "url": "/environments/metal-test/Metal%20Env%2013.exr"
+  },
+  {
+    "name": "Metal Env 14",
+    "url": "/environments/metal-test/Metal%20Env%2014.hdr"
+  },
+  {
+    "name": "Metal Env 15",
+    "url": "/environments/metal-test/Metal%20Env%2015.exr"
+  },
+  {
+    "name": "Metal Env 16",
+    "url": "/environments/metal-test/Metal%20Env%2016.exr"
+  },
+  {
+    "name": "Metal Env 17",
+    "url": "/environments/metal-test/Metal%20Env%2017.hdr"
+  },
+  {
+    "name": "Metal Env 18",
+    "url": "/environments/metal-test/Metal%20Env%2018.exr"
+  },
+  {
+    "name": "Metal Env 19",
+    "url": "/environments/metal-test/Metal%20Env%2019.hdr"
+  },
+  {
+    "name": "Metal Env 20",
+    "url": "/environments/metal-test/Metal%20Env%2020.hdr"
+  },
+  {
+    "name": "Metal Env 21",
+    "url": "/environments/metal-test/Metal%20Env%2021.hdr"
+  },
+  {
+    "name": "Metal Env 22",
+    "url": "/environments/metal-test/Metal%20Env%2022.hdr"
+  },
+  {
+    "name": "Metal Env 23",
+    "url": "/environments/metal-test/Metal%20Env%2023.hdr"
+  },
+  {
+    "name": "Metal Env 24",
+    "url": "/environments/metal-test/Metal%20Env%2024.hdr"
+  },
+  {
+    "name": "Metal Env 25",
+    "url": "/environments/metal-test/Metal%20Env%2025.exr"
+  },
+  {
+    "name": "Metal Env 26",
+    "url": "/environments/metal-test/Metal%20Env%2026.exr"
+  },
+  {
+    "name": "Metal Env 27",
+    "url": "/environments/metal-test/Metal%20Env%2027.exr"
+  },
+  {
+    "name": "Metal Env 28",
+    "url": "/environments/metal-test/Metal%20Env%2028.exr"
+  },
+  {
+    "name": "Metal Env 29",
+    "url": "/environments/metal-test/Metal%20Env%2029.exr"
+  },
+  {
+    "name": "Metal Env 30",
+    "url": "/environments/metal-test/Metal%20Env%2030.exr"
+  },
+  {
+    "name": "Metal Env 31",
+    "url": "/environments/metal-test/Metal%20Env%2031.exr"
+  },
+  {
+    "name": "Metal Env 32",
+    "url": "/environments/metal-test/Metal%20Env%2032.exr"
+  },
+  {
+    "name": "Metal Env 33",
+    "url": "/environments/metal-test/Metal%20Env%2033.exr"
+  },
+  {
+    "name": "Metal Env 34",
+    "url": "/environments/metal-test/Metal%20Env%2034.exr"
+  },
+  {
+    "name": "Metal Env 35",
+    "url": "/environments/metal-test/Metal%20Env%2035.exr"
+  },
+  {
+    "name": "Metal Env 36",
+    "url": "/environments/metal-test/Metal%20Env%2036.exr"
+  },
+  {
+    "name": "Metal Env 37",
+    "url": "/environments/metal-test/Metal%20Env%2037.exr"
+  },
+  {
+    "name": "Metal Env 38",
+    "url": "/environments/metal-test/Metal%20Env%2038.exr"
+  },
+  {
+    "name": "Metal Env 39",
+    "url": "/environments/metal-test/Metal%20Env%2039.exr"
+  },
+  {
+    "name": "Metal Env 40",
+    "url": "/environments/metal-test/Metal%20Env%2040.exr"
+  },
+  {
+    "name": "Metal Env 41",
+    "url": "/environments/metal-test/Metal%20Env%2041.exr"
+  },
+  {
+    "name": "Metal Env 42",
+    "url": "/environments/metal-test/Metal%20Env%2042.exr"
+  },
+  {
+    "name": "Metal Env 43",
+    "url": "/environments/metal-test/Metal%20Env%2043.exr"
+  },
+  {
+    "name": "Metal Env 44",
+    "url": "/environments/metal-test/Metal%20Env%2044.exr"
+  },
+  {
+    "name": "Metal Env 45",
+    "url": "/environments/metal-test/Metal%20Env%2045.exr"
+  },
+  {
+    "name": "Metal Env 46",
+    "url": "/environments/metal-test/Metal%20Env%2046.exr"
+  },
+  {
+    "name": "Metal Env 47",
+    "url": "/environments/metal-test/Metal%20Env%2047.exr"
+  },
+  {
+    "name": "Metal Env 48",
+    "url": "/environments/metal-test/Metal%20Env%2048.exr"
+  },
+  {
+    "name": "Metal Env 49",
+    "url": "/environments/metal-test/Metal%20Env%2049.exr"
+  },
+  {
+    "name": "Metal Env 50",
+    "url": "/environments/metal-test/Metal%20Env%2050.exr"
+  },
+  {
+    "name": "Metal Env 51",
+    "url": "/environments/metal-test/Metal%20Env%2051.exr"
+  },
+  {
+    "name": "Metal Env 52",
+    "url": "/environments/metal-test/Metal%20Env%2052.exr"
+  },
+  {
+    "name": "Metal Env 53",
+    "url": "/environments/metal-test/Metal%20Env%2053.exr"
+  },
+  {
+    "name": "Metal Env 54",
+    "url": "/environments/metal-test/Metal%20Env%2054.exr"
+  },
+  {
+    "name": "Metal Env 55",
+    "url": "/environments/metal-test/Metal%20Env%2055.exr"
+  },
+  {
+    "name": "Metal Env 56",
+    "url": "/environments/metal-test/Metal%20Env%2056.exr"
+  },
+  {
+    "name": "Metal Env 57",
+    "url": "/environments/metal-test/Metal%20Env%2057.exr"
+  },
+  {
+    "name": "Metal Env 58",
+    "url": "/environments/metal-test/Metal%20Env%2058.exr"
+  },
+  {
+    "name": "Metal Env 59",
+    "url": "/environments/metal-test/Metal%20Env%2059.exr"
+  },
+  {
+    "name": "Metal Env 60",
+    "url": "/environments/metal-test/Metal%20Env%2060.exr"
+  },
+  {
+    "name": "Metal Env 61",
+    "url": "/environments/metal-test/Metal%20Env%2061.exr"
+  },
+  {
+    "name": "Metal Env 62",
+    "url": "/environments/metal-test/Metal%20Env%2062.exr"
+  },
+  {
+    "name": "Metal Env 63",
+    "url": "/environments/metal-test/Metal%20Env%2063.exr"
+  },
+  {
+    "name": "Metal Env 64",
+    "url": "/environments/metal-test/Metal%20Env%2064.exr"
+  },
+  {
+    "name": "Metal Env 65",
+    "url": "/environments/metal-test/Metal%20Env%2065.exr"
+  }
+]

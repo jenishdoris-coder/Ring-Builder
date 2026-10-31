@@ -3,8 +3,8 @@ export const SKIN_TONE_STOPS = [
   { value: 40, hex: "#C89373" }, { value: 60, hex: "#A96F4F" },
   { value: 80, hex: "#7D4B34" }, { value: 100, hex: "#4A2A20" },
 ] as const;
-// A warm fair tone retains detail under the bright jewellery studio lighting.
-export const DEFAULT_SKIN_TONE = 30;
+// A slightly deeper warm tone under the bright jewellery studio lighting.
+export const DEFAULT_SKIN_TONE = 45;
 export const SKIN_TONE_GRADIENT = `linear-gradient(to bottom in srgb, ${SKIN_TONE_STOPS.map(stop => `${stop.hex} ${stop.value}%`).join(", ")})`;
 
 export const getSkinToneHex = (value: number) => {

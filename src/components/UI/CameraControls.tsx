@@ -34,7 +34,7 @@ export const CameraControls = ({ currentView, isExpanded, onSelectView, onToggle
   </button>}
   <span className="viewer-control-divider" aria-hidden="true" />
   {onTryAR && <button type="button" className="viewer-ar-control" aria-label="Try your ring in AR" title="Try your ring in AR" onClick={onTryAR} disabled={arDisabled}>
-    <Icon><path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4m-9-6 4-3 4 3-4 4-4-4Z" /></Icon><span>AR</span>
+    <Icon><path d="M7 7l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h3Z" /><path d="m9 10 1-1h4l1 1-3 3-3-3Zm1 3a3 3 0 1 0 4 0M18 10h.01" /></Icon>
   </button>}
   <button type="button" data-expand-viewer aria-label={isExpanded ? "Exit expanded view" : "Expand 3D viewer"} title={isExpanded ? "Exit expanded view" : "Expand 3D viewer"} aria-expanded={isExpanded} onClick={onToggleExpanded}>
     <Icon>{isExpanded ? <path d="M9 3v6H3m12-6v6h6M9 21v-6H3m12 6v-6h6" /> : <path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />}</Icon>

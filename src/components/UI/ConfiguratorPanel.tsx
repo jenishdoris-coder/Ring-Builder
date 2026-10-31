@@ -66,7 +66,7 @@ export const ConfiguratorPanel = (props: ConfiguratorPanelProps) => {
   return <aside id="ring-customization" className="product-configurator" aria-label="Ring Customizer">
     <div className="product-heading">
       <div className="product-eyebrow">Made personal. Made yours.</div>
-      <h1>{shank.name}<br /><span>{setting.name} Engagement Ring</span></h1>
+      <h1>{shank.name} {setting.name} Engagement Ring</h1>
       <p className="product-current-selection">{shape.name} · {props.selectedCarat} ct · {headMetal.id === shankMetal.id ? headMetal.name : "Two-tone gold"}</p>
       <RingPrice catalog={props.catalog} selection={{ shapeId: shape.id, carat: head.carat, headStyleId: headStyleId(head), bandId: shank.id, headMetalId: headMetal.id, bandMetalId: shankMetal.id }} />
       <p className="product-intro">Build your setting. Explore every detail.</p>

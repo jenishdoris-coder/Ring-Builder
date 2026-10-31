@@ -1,18 +1,36 @@
 import { Box3, CameraController, DoubleSide, Euler, Matrix4, MeshBasicMaterial, PerspectiveCamera, Quaternion, Vector3 } from "webgi";
 import type { RingCameraPose } from "./ringCameraViews";
 import type { EngravingPosition } from "../config/engraving";
+import type { PortraitFit } from "../config/portraitFit";
+import type { PortraitEnvironment } from "./portraitEnvironment";
 
 export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
-export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition };
+export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition; portraitFit?: PortraitFit; environment?: PortraitEnvironment };
 export const RING_PREVIEW_RESOLUTION = 1200;
 export const RING_PREVIEW_VERSION = "studio-1200-fitted-engraving-v16";
 
 /** Render just the enlarged photograph at a resolution suited to 3x zoom. */
 export const getRingDetailResolution = () => {
   const mobile = window.innerWidth <= 768;
+  const constrained = (navigator.hardwareConcurrency || 4) <= 8;
   const required = Math.ceil(Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8) * Math.min(window.devicePixelRatio || 1, 2) * 3 / 256) * 256;
-  return Math.min(mobile ? 2048 : 3072, Math.max(mobile ? 1800 : 2400, required));
+  return Math.min(constrained ? 1792 : 2048, Math.max(mobile ? 1600 : 1792, required));
 };
+
+const imageJobTails = new WeakMap<object, Promise<void>>();
+/** Captures and their cleanup must finish serially on the shared renderer. */
+export async function runRingImageJob<T>(viewer: object, signal: AbortSignal, job: () => Promise<T>): Promise<T> {
+  const previous = imageJobTails.get(viewer) ?? Promise.resolve();
+  let release!: () => void;
+  const completion = new Promise<void>(resolve => { release = resolve; });
+  const tail = previous.then(() => completion);
+  imageJobTails.set(viewer, tail);
+  await previous;
+  try {
+    if (signal.aborted) throw new DOMException("Photo cancelled", "AbortError");
+    return await job();
+  } finally { release(); if (imageJobTails.get(viewer) === tail) imageJobTails.delete(viewer); }
+}
 
 export const RING_PREVIEW_VIEWS = [
   { id: "three-quarter", label: "Three-quarter view", direction: [0.8, 0.4, -1], up: [0, 1, 0], lying: false },
@@ -243,18 +261,22 @@ export const fitPreviewCamera = (camera: any, bounds: Box3, direction: Vector3, 
   }
 };
 
-const orientImage = async (url: string) => {
+const orientImage = async (source: string | Blob) => {
   const image = new Image();
+  const url = typeof source === "string" ? source : URL.createObjectURL(source);
   image.src = url;
-  await image.decode();
-  const canvas = document.createElement("canvas");
-  canvas.width = image.width;
-  canvas.height = image.height;
-  const context = canvas.getContext("2d")!;
-  context.translate(0, canvas.height);
-  context.scale(1, -1);
-  context.drawImage(image, 0, 0);
-  return canvas.toDataURL("image/webp", 1);
+  try {
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext("2d")!;
+    context.translate(0, canvas.height); context.scale(1, -1); context.drawImage(image, 0, 0);
+    // Async encoding leaves wheel/pinch input free instead of synchronously
+    // encoding multi-megapixel PNG and WebP strings on every enlargement.
+    if (!canvas.toBlob) return canvas.toDataURL("image/webp", 1);
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Photo encoding failed")), "image/webp", 1));
+    return await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); });
+  } finally { if (typeof source !== "string") URL.revokeObjectURL(url); }
 };
 
 /** Tight clipping improves mobile depth precision around overlapping metal. */
@@ -279,19 +301,38 @@ const fitPhotoClipping = (camera: any, roots: any[]) => {
   }
 };
 
-const preserveLiveFrame = (canvas: HTMLCanvasElement) => {
+const preserveLiveFrame = async (viewer: any) => {
+  try {
+  const canvas: HTMLCanvasElement = viewer.canvas;
   if (!canvas.parentElement) return () => {};
   const overlay = document.createElement("img");
-  overlay.src = canvas.toDataURL("image/png");
+  const blob = canvas.toBlob ? await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", .94)) : null;
+  const url = blob ? URL.createObjectURL(blob) : canvas.toDataURL("image/png");
+  overlay.src = url;
   overlay.alt = "";
   overlay.setAttribute("aria-hidden", "true");
   Object.assign(overlay.style, { position: "absolute", inset: "0", width: "100%", height: "100%", pointerEvents: "none", zIndex: "4" });
-  canvas.parentElement.appendChild(overlay);
-  return () => requestAnimationFrame(() => requestAnimationFrame(() => overlay.remove()));
+  try { await overlay.decode(); } catch { /* A connected live frame is still a useful fallback. */ }
+  if (!canvas.isConnected) { if (blob) URL.revokeObjectURL(url); return () => {}; }
+  canvas.parentElement?.appendChild(overlay);
+  return () => {
+    const remove = () => { viewer.removeEventListener?.("postRender", presented); viewer.removeEventListener?.("dispose", remove); overlay.remove(); if (blob) URL.revokeObjectURL(url); };
+    const presented = () => {
+      if (viewer.renderer.defaultRenderToScreen === false || viewer.scene.renderCamera !== viewer.scene.activeCamera) return;
+      viewer.removeEventListener?.("postRender", presented);
+      requestAnimationFrame(remove);
+    };
+    // Two arbitrary animation frames can expire before a busy laptop draws its
+    // live camera. Keep the guard until an actual live frame is presented.
+    viewer.addEventListener?.("postRender", presented);
+    viewer.addEventListener?.("dispose", remove);
+    viewer.setDirty?.();
+  };
+  } catch { return () => {}; }
 };
 
 /** Render product photos off-screen through the same metal/diamond pipeline. */
-export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal, options: { viewId?: string; resolution?: number; engraving?: { cameraPose: (camera: any) => RingCameraPose | undefined; position?: EngravingPosition }; customView?: { id: string; label: string; cameraPose: (camera: any, roots: any[]) => RingCameraPose; beforeRender: (camera: any) => void; capture: (renderer: any, target: any) => string } } = {}): Promise<RingPreviewImage[]> => {
+export const captureRingPreviews = async (viewer: any, roots: any[], signal: AbortSignal, options: { viewId?: string; resolution?: number; engraving?: { cameraPose: (camera: any) => RingCameraPose | undefined; position?: EngravingPosition }; customView?: { id: string; label: string; cameraPose: (camera: any, roots: any[]) => RingCameraPose; configureCamera?: (camera: any, roots: any[]) => void; beforeRender: (camera: any) => void; capture: (renderer: any, target: any) => string | Blob | Promise<Blob> } } = {}): Promise<RingPreviewImage[]> => {
   const scene = viewer.scene;
   const renderer = viewer.renderer;
   const progressive = viewer.getPluginByType?.("Progressive");
@@ -308,14 +349,14 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
   const requestedResolution = options.resolution ?? RING_PREVIEW_RESOLUTION;
   const resolution = Math.min(requestedResolution, renderer.rendererObject?.capabilities.maxTextureSize ?? requestedResolution);
   const smoothDetail = resolution > RING_PREVIEW_RESOLUTION && Boolean(progressive);
-  const smoothPreview = Boolean(progressive && temporalAA?.enabled);
-  const sampleCount = smoothDetail ? 8 : smoothPreview ? 4 : 2;
+  const smoothPreview = Boolean(progressive && (temporalAA?.enabled || options.customView));
+  const sampleCount = smoothDetail || smoothPreview ? 4 : 2;
   const accumulate = smoothDetail || smoothPreview;
   const aspect = 1;
   const camera = new CameraController(new PerspectiveCamera(25, aspect, 0.01, 100), { controlsMode: "", controlsEnabled: false, aspect, fov: 25 }, viewer.canvas);
   if (!roots.length || ringBounds(roots).isEmpty()) { camera.dispose(); return []; }
   const stage = createRingPhotoStage(roots, ground);
-  const releaseLiveFrame = preserveLiveFrame(viewer.canvas);
+  const releaseLiveFrame = await preserveLiveFrame(viewer);
   let restored = false;
   const restore = () => {
     if (restored) return;
@@ -375,6 +416,7 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
       } else fitPreviewCamera(camera.cameraObject, bounds, direction, up, aspect, roots, view.lying);
       camera.position.copy(camera.cameraObject.position);
       camera.target.copy(engravingPose?.target ?? bounds.getCenter(new Vector3()));
+      options.customView?.configureCamera?.(camera.cameraObject, roots);
       const floor = ground?.mesh?.modelObject;
       // WebGI's depth uniforms read the controller's near/far, so update the
       // controller as well as its underlying projection matrix.
@@ -397,7 +439,8 @@ export const captureRingPreviews = async (viewer: any, roots: any[], signal: Abo
       }
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       const target = renderer.composer.readBuffer;
-      const url = await orientImage(options.customView ? options.customView.capture(renderer, target) : renderer.renderTargetToDataUrl(target, "image/png"));
+      const source = options.customView ? await options.customView.capture(renderer, target) : renderer.renderTargetToDataUrl(target, "image/png");
+      const url = await orientImage(source);
       if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");
       images.push({ id: view.id, label: view.label, url, width: resolution, height: resolution, ...(view.id === "engraving" ? { engravingPosition: options.engraving?.position } : {}) });
     }

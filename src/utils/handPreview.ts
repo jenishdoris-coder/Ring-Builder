@@ -5,6 +5,7 @@ import { PART_LOAD_OPTIONS } from "./partLoader";
 import { measureRingBore } from "./ringBore";
 import { fitCameraToPoints } from "./ringCameraViews";
 import { DEFAULT_SKIN_TONE, getSkinToneLinear } from "../config/skinTones";
+import { DEFAULT_HAND_FIT, type HandFitAdjustments } from "../config/handFit";
 
 export class HandPreview {
   readonly root = new Object3D();
@@ -19,6 +20,7 @@ export class HandPreview {
   private depthState?: { camera: any; near: number; far: number; auto: any; min: any; max: any };
   private skinTone = { value: new Color().setRGB(...getSkinToneLinear(DEFAULT_SKIN_TONE)) };
   private groundState?: { enabled: boolean; visible: boolean; meshVisible: boolean };
+  private fitAdjustments = { ...DEFAULT_HAND_FIT };
 
   constructor(private viewer: any, private manager: any) {
     this.root.name = "ring-finger-hand-preview";
@@ -113,16 +115,18 @@ export class HandPreview {
     const finger = calibration.ringFinger;
     const axis = new Vector3(...finger.axis as [number, number, number]).normalize();
     // Align the crown with the dorsal centre of this right-hand finger.
-    const dorsal = new Vector3(...finger.dorsal as [number, number, number]).normalize().applyAxisAngle(axis, finger.rollDegrees * Math.PI / 180);
+    const dorsal = new Vector3(...finger.dorsal as [number, number, number]).normalize().applyAxisAngle(axis, (finger.rollDegrees + this.fitAdjustments.roll) * Math.PI / 180);
     const lateral = new Vector3().crossVectors(axis, dorsal).normalize();
     const handBasis = new Matrix4().makeBasis(lateral, axis, dorsal);
+    handBasis.multiply(new Matrix4().makeRotationX(this.fitAdjustments.pitch * Math.PI / 180));
+    handBasis.multiply(new Matrix4().makeRotationZ(this.fitAdjustments.yaw * Math.PI / 180));
     const ringRotation = new Matrix4().extractRotation(shank.matrixWorld);
     const scale = innerRadius * ringScale / finger.radius * finger.clearance;
     const rawWorld = new Matrix4().multiplyMatrices(ringRotation, handBasis.invert()).scale(new Vector3(scale, scale, scale));
     // Keep the palm-side edge of wide/multi-row bands clear of the finger web.
     const halfWidthOnHand = halfWidth * ringScale / scale;
     const seatOffset = Math.min(.65, Math.max(.08, halfWidthOnHand - .12));
-    const seat = new Vector3(...finger.anchor as [number, number, number]).addScaledVector(axis, seatOffset);
+    const seat = new Vector3(...finger.anchor as [number, number, number]).addScaledVector(axis, seatOffset + finger.seatOffset + this.fitAdjustments.seat);
     this.fitFingerSurface(seat, axis, halfWidthOnHand);
     const anchor = seat.applyMatrix4(rawWorld);
     const center = new Vector3().setFromMatrixPosition(shank.matrixWorld);
@@ -234,6 +238,11 @@ export class HandPreview {
   setSkinTone(value: number) {
     this.skinTone.value.setRGB(...getSkinToneLinear(value));
     this.viewer.setDirty?.();
+  }
+
+  setFitAdjustments(value: HandFitAdjustments | undefined, shank: any) {
+    this.fitAdjustments = { ...DEFAULT_HAND_FIT, ...value };
+    if (this.active && shank) { this.fit(shank); this.updateDepthRange(); this.viewer.setDirty?.(); }
   }
 
   cameraPose(camera: any) {

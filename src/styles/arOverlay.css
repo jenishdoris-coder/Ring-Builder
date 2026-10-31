@@ -4,7 +4,6 @@
 .ar-opening [role=status] {display:grid;justify-items:center;gap:12px;}
 .ar-opening-spinner {display:block;width:28px;height:28px;border:2px solid #ffffff30;border-top-color:#e0c99c;border-radius:50%;animation:ar-spin .8s linear infinite;}
 .viewer-icon-controls .viewer-ar-control{position:relative;}
-.viewer-ar-control span{position:absolute;right:1px;bottom:1px;background:#fff;color:#273656;font-size:6px;line-height:1;padding:2px;border-radius:3px;font-weight:700;}
 @keyframes ar-spin {to{transform:rotate(360deg)}}
 @keyframes ar-open {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.ar-overlay,.ar-opening-spinner{animation:none}}

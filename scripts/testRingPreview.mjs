@@ -151,8 +151,8 @@ globalThis.requestAnimationFrame = callback => { callback(0); return 0; };
 const smoothPhoto = makeViewer(1800);
 const [smoothImage] = await preview.captureRingPreviews(smoothPhoto.viewer, [root], new AbortController().signal, { viewId: "profile", resolution: 1800 });
 assert.equal(smoothImage.width, 1800);
-assert.equal(smoothPhoto.count(), 8, "only enlarged photos use the additional edge-smoothing samples");
-assert.equal(new Set(smoothPhoto.projections.map(view => `${view.offsetX}:${view.offsetY}`)).size, 8, "each sample uses a different subpixel position without losing the centered photo projection");
+assert.equal(smoothPhoto.count(), 4, "enlargement keeps a bounded four-sample GPU budget");
+assert.equal(new Set(smoothPhoto.projections.map(view => `${view.offsetX}:${view.offsetY}`)).size, 4, "each sample uses a different subpixel position without losing the centered photo projection");
 smoothPhoto.checkRestored();
 const mobilePhoto = makeViewer(1200, true);
 await preview.captureRingPreviews(mobilePhoto.viewer, [root], new AbortController().signal, { viewId: "profile" });
@@ -177,7 +177,7 @@ failed.viewer.renderer.renderTargetToDataUrl = () => { throw new Error("readback
 await assert.rejects(preview.captureRingPreviews(failed.viewer, [root], new AbortController().signal), /readback failed/);
 failed.checkRestored();
 
-const portrait = makeViewer();
+const portrait = makeViewer(1200, true);
 let portraitSamples = 0, portraitExports = 0;
 const customView = {
   id: "lifestyle-warm", label: "Warm portrait",
@@ -188,10 +188,10 @@ const customView = {
 const [portraitImage] = await preview.captureRingPreviews(portrait.viewer, [root], new AbortController().signal, { customView });
 assert.equal(portraitImage.id, "lifestyle-warm");
 assert.equal(portraitImage.url, "composited-portrait", "portrait output comes from the final compositor, not the ordinary ring readback");
-assert.equal(portraitSamples, 2, "a portrait request renders only that photograph");
+assert.equal(portraitSamples, 4, "one small portrait patch uses a bounded four-sample budget");
 assert.equal(portraitExports, 1);
 portrait.checkRestored();
-const failedPortrait = makeViewer();
+const failedPortrait = makeViewer(1200, true);
 await assert.rejects(preview.captureRingPreviews(failedPortrait.viewer, [root], new AbortController().signal, { customView: { ...customView, capture: () => { throw new Error("portrait export failed"); } } }), /portrait export failed/);
 failedPortrait.checkRestored();
 
@@ -247,4 +247,37 @@ for (const [headRadius, bandThickness] of [[0.25, 0.12], [0.8, 0.12], [0.2, 0.35
   assert.ok(Math.abs(headBottom) < 1e-6 && Math.abs(backBottom) < 1e-6, "both curved surfaces meet the ground, including narrow heads and thick bands");
   curvedStage.restore();
 }
-console.log("Gallery checks passed: framing, photo poses, depth shadows, parent transforms, live pose restoration, cancellation, and error recovery.");
+// A stale export must finish restoring shared GPU state before the next one.
+const queueOwner = {}, jobOrder = [];
+let finishFirst;
+const firstFinished = new Promise(resolve => { finishFirst = resolve; });
+const firstJob = preview.runRingImageJob(queueOwner, new AbortController().signal, async () => { jobOrder.push("first-start"); await firstFinished; jobOrder.push("first-cleaned"); return 1; });
+const staleJobController = new AbortController();
+const staleJob = preview.runRingImageJob(queueOwner, staleJobController.signal, async () => { jobOrder.push("stale-start"); });
+const rejectedStale = assert.rejects(staleJob, error => error.name === "AbortError");
+const lastJob = preview.runRingImageJob(queueOwner, new AbortController().signal, async () => { jobOrder.push("last-start"); return 3; });
+await Promise.resolve(); staleJobController.abort();
+assert.deepEqual(jobOrder, ["first-start"], "photo requests cannot render concurrently");
+finishFirst();
+assert.equal(await firstJob, 1); await rejectedStale; assert.equal(await lastJob, 3);
+assert.deepEqual(jobOrder, ["first-start", "first-cleaned", "last-start"], "cancelled queued jobs do not disturb the next capture");
+
+// A slow laptop can take more than two RAFs to render after target resizing.
+const guarded = makeViewer(), oldCreateElement = document.createElement, overlays = [], events = new Map();
+document.createElement = tag => tag === "img" ? { style: {}, setAttribute() {}, async decode() {}, remove() { const i = overlays.indexOf(this); if (i >= 0) overlays.splice(i, 1); } } : oldCreateElement(tag);
+guarded.viewer.canvas.parentElement = { appendChild: image => overlays.push(image) };
+guarded.viewer.canvas.isConnected = true;
+guarded.viewer.canvas.toDataURL = () => "live-frame";
+guarded.viewer.addEventListener = (type, callback) => { if (!events.has(type)) events.set(type, new Set()); events.get(type).add(callback); };
+guarded.viewer.removeEventListener = (type, callback) => events.get(type)?.delete(callback);
+guarded.viewer.dispatchEvent = event => { for (const callback of [...events.get(event.type) ?? []]) callback(); };
+await preview.captureRingPreviews(guarded.viewer, [root], new AbortController().signal, { viewId: "profile" });
+assert.equal(overlays.length, 1, "the saved frame survives photo cleanup until the live camera draws");
+guarded.viewer.renderer.defaultRenderToScreen = false;
+guarded.viewer.dispatchEvent({ type: "postRender" });
+assert.equal(overlays.length, 1, "an off-screen photo render cannot release the live frame guard");
+guarded.viewer.renderer.defaultRenderToScreen = true;
+guarded.viewer.dispatchEvent({ type: "postRender" });
+assert.equal(overlays.length, 0, "only a presented live frame releases the snapshot");
+guarded.checkRestored(); document.createElement = oldCreateElement;
+console.log("Gallery checks passed: framing, shadows, live restoration, serial jobs, cancellation, frame guards, and error recovery.");

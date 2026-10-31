@@ -73,7 +73,7 @@ export const ViewerStage = ({ children, onHoverChange, handSkinTone, onChangeHan
       <span className="viewer-touch-hint">Drag to rotate · Pinch to zoom</span>
       <EngravingPositionSwitch positions={engravingPositions} selected={engravingPosition} onSelect={onSelectEngraving} location="viewer" />
       <aside className="viewer-right-rail" aria-label={controls.currentView === "hand" ? "Hand appearance" : undefined}>
-        {controls.currentView === "hand" && <HandToneControl value={handSkinTone} onChange={onChangeHandSkinTone} />}
+        {controls.currentView === "hand" && <div className="hand-appearance-controls"><HandToneControl value={handSkinTone} onChange={onChangeHandSkinTone} /></div>}
       </aside>
     </div>
   </>;

@@ -23,6 +23,29 @@ const emit = async path => {
   await writeFile(output, code); return output;
 };
 try {
+  const { getRingContactShadow } = await import(pathToFileURL(await emit(resolve("src/utils/ringContactShadow.ts"))).href);
+  const shadowAt = (map, angle, y) => {
+    const x = (Math.floor((angle / (2 * Math.PI) + .5) * map.width) % map.width + map.width) % map.width;
+    const row = Math.max(0, Math.min(map.height - 1, Math.floor((y - map.minY) / map.spanY * map.height)));
+    return map.data[(row * map.width + x) * 4] / 255;
+  };
+  const shadowRow = (y = 0, start = 0, arc = Math.PI * 2) => {
+    const geometry = new TorusGeometry(10, .65, 12, 128, arc);
+    geometry.rotateZ(start); geometry.rotateX(Math.PI / 2);
+    const mesh = new Mesh(geometry, new MeshPhysicalMaterial()); mesh.position.y = y;
+    return mesh;
+  };
+  const twoRows = new Group(); twoRows.add(shadowRow(-1.8), shadowRow(1.8));
+  const rowShadow = getRingContactShadow(twoRows, 9.35);
+  assert.ok(shadowAt(rowShadow, 0, 1.8) > .5, "metal rows cast contact shadows");
+  assert.ok(shadowAt(rowShadow, 0, 0) < .1, "the empty gap between rows cannot cast a solid band shadow");
+  const openBand = new Group(); openBand.add(shadowRow(0, Math.PI / 2 + .5, Math.PI * 2 - 1));
+  const openShadow = getRingContactShadow(openBand, 9.35);
+  assert.ok(shadowAt(openShadow, 0, 0) < .1, "an open bypass cannot cast a closed-band shadow");
+  assert.ok(shadowAt(openShadow, Math.PI / 2, 0) > .5, "the remaining bypass side still casts a shadow");
+  assert.equal(getRingContactShadow(openBand, 9.35), openShadow, "both portraits reuse the same CPU contact map");
+  twoRows.traverse(mesh => { mesh.geometry?.dispose(); mesh.material?.dispose(); });
+  openBand.traverse(mesh => { mesh.geometry?.dispose(); mesh.material?.dispose(); });
   const { measureRingBore } = await import(pathToFileURL(await emit(resolve("src/utils/ringBore.ts"))).href);
   const { HandPreview } = await import(pathToFileURL(await emit(resolve("src/utils/handPreview.ts"))).href);
   const calibration = JSON.parse(await readFile("src/config/handPreview.json", "utf8"));
@@ -66,7 +89,7 @@ try {
     hand.show(band); band.updateWorldMatrix(true, true);
     const inverse = band.matrixWorld.clone().invert(), bore = measureRingBore(band), scale = bore.radius * .119 / calibration.ringFinger.radius * calibration.ringFinger.clearance;
     const halfWidthOnHand = bore.halfWidth * .119 / scale, offset = Math.min(.65, Math.max(.08, halfWidthOnHand - .12));
-    const seat = anchor.clone().addScaledVector(axis, offset), fittedSeat = seat.clone().applyMatrix4(handMesh.matrixWorld).applyMatrix4(inverse);
+    const seat = anchor.clone().addScaledVector(axis, offset + (calibration.ringFinger.seatOffset ?? 0)), fittedSeat = seat.clone().applyMatrix4(handMesh.matrixWorld).applyMatrix4(inverse);
     assert.ok(fittedSeat.length() < 1e-6, "the finger seat stays at the centre of the bore");
     let checked = 0;
     for (let i = 0; i < positions.length; i += 3) {
@@ -87,10 +110,18 @@ try {
     hand.resume(band);
     assert.ok(hand.root.matrixWorld.elements.every((v, i) => Math.abs(v - pose.elements[i]) < 1e-8), "photo capture cannot accumulate a seating offset");
     assert.equal(band.visible, true); assert.deepEqual(band.matrix.elements, saved.elements, "seating never changes the band pose");
+    for (const adjustment of [{ roll: 12, pitch: 0, yaw: 0, seat: 0 }, { roll: -8, pitch: 7, yaw: -4, seat: .1 }]) {
+      hand.setFitAdjustments(adjustment, band);
+      assert.ok(hand.root.matrixWorld.elements.every(Number.isFinite), "all fitting controls produce a finite transform");
+      assert.notDeepEqual(hand.root.matrixWorld.elements, pose.elements, "tilt controls update the hand fit");
+      band.updateMatrix(); assert.deepEqual(band.matrix.elements, saved.elements, "manual fit cannot deform or move the jewellery");
+    }
+    hand.setFitAdjustments(undefined, band);
+    assert.ok(hand.root.matrixWorld.elements.every((v, i) => Math.abs(v - pose.elements[i]) < 1e-8), "reset returns exactly to the fixed hand calibration");
     scene.remove(band);
   }
   hand.dispose();
-  console.log("Ring fit checks passed: tessellation-independent bore, narrow/wide band skin clearance, depth participation, and capture resume.");
+  console.log("Ring fit checks passed: open-band and multi-row contact shadows, cached profiles, bore measurement, skin clearance, depth participation, and capture resume.");
 } finally {
   for (const file of [...emitted.values(), mock]) await unlink(file);
   await rmdir(directory);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { RingPreviewImage } from "../../utils/ringPreview";
+import { isLifestyleView } from "../../config/lifestylePhotos";
 
 type ImageTransform = { scale: number; x: number; y: number };
 type Point = { x: number; y: number };
@@ -20,8 +21,9 @@ const imageMotionFrames = (origin: ImageOrigin, frame: DOMRect, reverse = false,
   });
 };
 
-export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpened, onClosing }: { image: RingPreviewImage; origin: ImageOrigin; enhancing?: boolean; onClose: () => void; onOpened: () => void; onClosing: () => void }) => {
+export const ImageLightbox = ({ image, origin, enhancing = false, onInteractionChange, onClose, onOpened, onClosing }: { image: RingPreviewImage; origin: ImageOrigin; enhancing?: boolean; onInteractionChange?: (active: boolean) => void; onClose: () => void; onOpened: () => void; onClosing: () => void }) => {
   const fillWidth = image.id === "engraving";
+  const lifestyle = isLifestyleView(image.id);
   const overlayRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -33,10 +35,18 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
   const imageMotionRef = useRef<Animation | null>(null);
   const finalBoundsRef = useRef<DOMRect | null>(null);
   const closingRef = useRef(false);
+  const interactionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const transformFrame = useRef(0);
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTap = useRef<{ x: number; y: number; time: number } | null>(null);
   const [transform, setTransform] = useState(FIT);
   const [dragging, setDragging] = useState(false);
+  const interact = () => {
+    onInteractionChange?.(true);
+    clearTimeout(interactionTimer.current);
+    interactionTimer.current = setTimeout(() => { if (!pointers.current.size) onInteractionChange?.(false); }, 550);
+  };
+  useEffect(() => () => { clearTimeout(interactionTimer.current); cancelAnimationFrame(transformFrame.current); onInteractionChange?.(false); }, [onInteractionChange]);
   const requestClose = useCallback(() => {
     if (closingRef.current) return;
     closingRef.current = true;
@@ -68,10 +78,12 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
     const maxY = Math.max(0, (fitHeight * scale - bounds.height) / 2);
     const constrained = { scale, x: clamp(next.x, -maxX, maxX), y: clamp(next.y, -maxY, maxY) };
     transformRef.current = constrained;
-    setTransform(constrained);
+    // Coalesce pointer events while the larger image decodes in the background.
+    if (!transformFrame.current) transformFrame.current = requestAnimationFrame(() => { transformFrame.current = 0; setTransform(transformRef.current); });
   };
   const zoomAt = (scale: number, anchor: Point = { x: 0, y: 0 }) => {
     if (closingRef.current) return;
+    interact();
     if (motionRef.current?.playState === "running") { motionRef.current.finish(); imageMotionRef.current?.finish(); }
     const current = transformRef.current;
     const nextScale = clamp(scale, 1, 3), factor = nextScale / current.scale;
@@ -135,6 +147,7 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
 
   const pointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (closingRef.current || event.button !== 0 || pointers.current.size >= 2) return;
+    interact();
     if (motionRef.current?.playState === "running") { motionRef.current.finish(); imageMotionRef.current?.finish(); }
     event.preventDefault();
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -145,6 +158,7 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
   const pointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const previous = pointers.current.get(event.pointerId);
     if (!previous) return;
+    interact();
     const before = Array.from(pointers.current.values());
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const current = transformRef.current;
@@ -168,13 +182,14 @@ export const ImageLightbox = ({ image, origin, enhancing = false, onClose, onOpe
       } else lastTap.current = { x: event.clientX, y: event.clientY, time: now };
     }
     pointers.current.delete(event.pointerId);
+    interact();
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     setDragging(pointers.current.size > 0);
     touchStart.current = null;
   };
 
   return <div ref={overlayRef} className="product-image-lightbox" role="dialog" aria-modal="true" aria-label={image.label} onClick={event => { if (event.target === event.currentTarget) requestClose(); }}>
-    <div ref={frameRef} className="product-image-frame">
+    <div ref={frameRef} className={`product-image-frame ${lifestyle ? "is-lifestyle" : ""}`}>
       <div ref={viewportRef} className={`product-image-viewport ${fillWidth ? "is-engraving" : ""} ${transform.scale > 1 ? "is-zoomed" : ""} ${dragging ? "is-dragging" : ""}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onLostPointerCapture={pointerUp}
         onDoubleClick={event => { const bounds = event.currentTarget.getBoundingClientRect(); zoomAt(transformRef.current.scale > 1 ? 1 : 2, { x: event.clientX - bounds.left - bounds.width / 2, y: event.clientY - bounds.top - bounds.height / 2 }); }}>
         <img ref={imageRef} src={image.url} alt={image.label} draggable={false} onLoad={() => update(transformRef.current)} style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }} />

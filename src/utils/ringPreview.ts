@@ -7,7 +7,7 @@ import type { PortraitEnvironment } from "./portraitEnvironment";
 export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
 export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition; portraitFit?: PortraitFit; environment?: PortraitEnvironment };
 export const RING_PREVIEW_RESOLUTION = 1200;
-export const RING_PREVIEW_VERSION = "studio-1200-fitted-engraving-v16";
+export const RING_PREVIEW_VERSION = "studio-1200-balanced-resting-v17";
 
 /** Render just the enlarged photograph at a resolution suited to 3x zoom. */
 export const getRingDetailResolution = () => {
@@ -72,16 +72,28 @@ const contactVertices = (roots: any[]) => {
   return points;
 };
 
-/** Find a common support line under the actual head and band surfaces. */
+/** Balance the front of the assembly against the back of the band. Wide
+ * bypass shoulders can support the front before the stone touches the floor. */
 const findRestingTilt = (head: number[], band: number[]) => {
   if (!head.length || !band.length) return 0;
+  let minX = Infinity, maxX = -Infinity;
+  for (let index = 0; index < band.length; index += 2) {
+    minX = Math.min(minX, band[index]);
+    maxX = Math.max(maxX, band[index]);
+  }
+  const middleX = (minX + maxX) / 2;
+  const front = [...head], back: number[] = [];
+  for (let index = 0; index < band.length; index += 2) {
+    (band[index] > middleX ? front : back).push(band[index], band[index + 1]);
+  }
+  if (!back.length) return 0;
   const lowest = (points: number[], angle: number) => {
     const sine = Math.sin(angle), cosine = Math.cos(angle);
     let floor = Infinity;
     for (let index = 0; index < points.length; index += 2) floor = Math.min(floor, points[index] * sine + points[index + 1] * cosine);
     return floor;
   };
-  const gap = (angle: number) => lowest(head, angle) - lowest(band, angle);
+  const gap = (angle: number) => lowest(front, angle) - lowest(back, angle);
   let lower = -Math.PI / 4, upper = Math.PI / 4;
   if (gap(lower) >= 0 || gap(upper) <= 0) return 0;
   for (let iteration = 0; iteration < 28; iteration++) {

@@ -244,9 +244,35 @@ for (const [headRadius, bandThickness] of [[0.25, 0.12], [0.8, 0.12], [0.2, 0.35
   curvedStage.pose(true);
   const headBottom = new Box3().setFromObject(curvedHead, true).min.y;
   const backBottom = new Box3().setFromObject(curvedBand, true).min.y;
-  assert.ok(Math.abs(headBottom) < 1e-6 && Math.abs(backBottom) < 1e-6, "both curved surfaces meet the ground, including narrow heads and thick bands");
+  assert.ok(headBottom >= -1e-6 && Math.abs(backBottom) < 1e-6, "curved bands rest on the floor without pushing a narrow head through it");
+  if (headRadius >= bandThickness) assert.ok(Math.abs(headBottom) < 1e-6, "a wider head also touches the floor");
   curvedStage.restore();
 }
+
+// A wide bypass shoulder must not leave the back of the band floating. A
+// narrow stone may sit above the floor when the shoulders support the front.
+const bypassHead = new Group(), bypassBand = new Group();
+const bypassStone = new Mesh(new SphereGeometry(.2, 24, 20), new MeshBasicMaterial());
+bypassStone.position.z = 1.7;
+bypassHead.add(bypassStone);
+const bypassLoop = new Mesh(new TorusGeometry(1.2, .12, 20, 64), new MeshBasicMaterial());
+bypassLoop.rotation.x = Math.PI / 2;
+bypassBand.add(bypassLoop);
+const wideShoulder = new Mesh(new BoxGeometry(.5, .9, .4), new MeshBasicMaterial());
+wideShoulder.position.z = .9;
+bypassBand.add(wideShoulder);
+const bypassStage = preview.createRingPhotoStage([bypassHead, bypassBand]);
+bypassStage.pose(true);
+let rearFloor = Infinity;
+const vertices = bypassLoop.geometry.attributes.position;
+for (let index = 0; index < vertices.count; index++) {
+  const point = new Vector3().fromBufferAttribute(vertices, index);
+  if (point.y < 0) rearFloor = Math.min(rearFloor, point.applyMatrix4(bypassLoop.matrixWorld).y);
+}
+assert.ok(Math.abs(rearFloor) < 1e-6, "the back of a bypass band touches the floor");
+assert.ok(new Box3().setFromObject(bypassHead, true).min.y > .05, "wide shoulders support a narrower head without tipping the ring onto its front");
+assert.ok(Math.abs(new Box3().setFromObject(wideShoulder, true).min.y) < 1e-6, "the bypass front shoulder also rests on the floor");
+bypassStage.restore();
 // A stale export must finish restoring shared GPU state before the next one.
 const queueOwner = {}, jobOrder = [];
 let finishFirst;

@@ -162,7 +162,8 @@ export const App = () => {
     setEngraving([]); setEngravingTexts({ bottom: "", left: "", right: "" }); setEngravingPositions(["bottom"]); setMultipleEngraving(false); setEngravingStatus("idle"); setEngravingFocusPosition("bottom"); setEngravingPhotoPosition("bottom");
   };
   const currentPreviews = previews?.key === previewKey;
-  const nextPortrait = lifestyleVisible && !galleryBudget.scrolling && !mobilePreview.pending && LIFESTYLE_PHOTOS.find(photo => lifestylePhotos[`${previewKey}:${photo.id}`] === undefined);
+  const studioReady = Boolean(currentPreviews && !isModelLoading && !mobilePreview.pending);
+  const nextPortrait = studioReady && lifestyleVisible && !galleryBudget.scrolling && LIFESTYLE_PHOTOS.find(photo => lifestylePhotos[`${previewKey}:${photo.id}`] === undefined);
   const canRest = !isModelLoading && currentPreviews;
   const pauseViewer = arOpen || Boolean(canRest && (enlargedView && !enlargedView.pending || !enlargedView && (galleryBudget.scrolling || !galleryBudget.viewerVisible && !nextPortrait)));
   const isAutoRotating = cameraView === "front" && !isViewerHovered && !pauseViewer && galleryBudget.viewerVisible && !galleryBudget.scrolling;
@@ -188,7 +189,7 @@ export const App = () => {
               <figcaption>{view.label}</figcaption>
             </figure>;
           });
-  const modelPhotos = <LifestyleGallery designKey={previewKey} images={lifestylePhotos} pending={mobilePreview.pending || isModelLoading} embedded={mobilePreview.mobile} onVisibleChange={setLifestyleVisible}
+  const modelPhotos = <LifestyleGallery designKey={previewKey} images={lifestylePhotos} pending={!studioReady} embedded={mobilePreview.mobile} onVisibleChange={setLifestyleVisible}
           onOpen={(image, origin) => setEnlargedView({ key: previewKey, image, resolution: LIFESTYLE_PREVIEW_RESOLUTION, pending: false, detailReady: false, closing: false, origin })}
           onRetry={id => setLifestylePhotos(current => { const next = { ...current }; delete next[`${previewKey}:${id}`]; return next; })} />;
   return <div className="atelier-app-root product-page">

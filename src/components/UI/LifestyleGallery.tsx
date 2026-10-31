@@ -28,11 +28,10 @@ export const LifestyleGallery = ({ designKey, images, pending, onVisibleChange, 
         const image = images[`${designKey}:${photo.id}`];
         const ready = Boolean(image && decoded[photo.id] === image.url);
         const preparing = image !== null && (!ready || pending);
-        const placeholderX = photo.flipX ? photo.crop.left + photo.crop.size : -photo.crop.left;
         return <figure key={photo.id} className={`lifestyle-portrait ${preparing ? "is-refreshing" : ""}`} aria-busy={preparing}>
           <button type="button" disabled={!ready || pending} aria-label={`Enlarge ${photo.label.toLowerCase()}`} onClick={event => { if (!image) return; const rect = event.currentTarget.getBoundingClientRect(); onOpen(image, { left: rect.left, top: rect.top, width: rect.width, height: rect.height }); }}>
             {image && <img className={`lifestyle-generated-image ${ready && !pending ? "is-ready" : ""}`} src={image.url} onLoad={() => setDecoded(current => ({ ...current, [photo.id]: image.url }))} alt={`Your selected ring worn in the ${photo.label.toLowerCase()}`} loading="lazy" decoding="async" />}
-            <img className="lifestyle-base-image" src={photo.image} style={{ width: `${100 / photo.crop.size}%`, height: `${100 / photo.crop.size}%`, maxWidth: "none", transformOrigin: "0 0", transform: `translate(${placeholderX * 100}%, ${-photo.crop.top * 100}%) scaleX(${photo.flipX ? -1 : 1})` }} alt="" aria-hidden="true" loading="lazy" decoding="async" /><span className="lifestyle-expand" aria-hidden="true">⤢</span>
+            {ready && !pending && <span className="lifestyle-expand" aria-hidden="true">⤢</span>}
           </button>
           <div className={`lifestyle-portrait-status ${preparing || image === null ? "is-active" : ""}`} aria-hidden={!preparing && image !== null}>{image === null ? <button type="button" onClick={() => onRetry(photo.id)}>Retry model preview</button> : <span className="lifestyle-loading-pill" role="status"><svg viewBox="0 0 32 32" aria-hidden="true"><circle className="lifestyle-loader-orbit" cx="16" cy="19" r="9" /><path d="m10 6 3-3h6l3 3-6 7Zm0 0h12M13 3l3 10 3-10" /></svg><span>Preparing preview</span></span>}</div>
           <figcaption>{photo.label}</figcaption>

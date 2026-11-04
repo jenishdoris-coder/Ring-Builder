@@ -1,4 +1,4 @@
-import deployment from "./deployment.json";
+import deployment from "./deployment.json" with { type: "json" };
 
 /** Public asset addresses only. Credentials are never imported into the browser. */
 export const assetUrl = (path: string) => {

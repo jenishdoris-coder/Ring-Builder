@@ -1,5 +1,5 @@
-import thumbnails from '../config/modelThumbnails.json';
-import presets from '../config/thumbnailPresets.json';
+import thumbnails from '../config/modelThumbnails.json' with { type: 'json' };
+import presets from '../config/thumbnailPresets.json' with { type: 'json' };
 import type {RingCatalog} from '../types/catalog';
 
 export const catalogModels=(catalog:RingCatalog)=>[

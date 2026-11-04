@@ -1,7 +1,7 @@
-import library from "./environmentLibrary.json";
-import presets from "./thumbnailPresets.json";
+import library from "./environmentLibrary.json" with { type: "json" };
+import presets from "./thumbnailPresets.json" with { type: "json" };
 import type { BuilderAppearance, EnvironmentChoice, ThumbnailChoice } from "../types/appearance";
-import { assetUrl } from "./assets";
+import { assetUrl } from "./assets.js";
 export const ENVIRONMENTS = library as { id: string; name: string; url: string; preview: string }[];
 export const THUMBNAIL_PRESETS = presets as { id: string; name: string; caption: string; preview: string; [key: string]: unknown }[];
 export const DEFAULT_APPEARANCE: BuilderAppearance = {

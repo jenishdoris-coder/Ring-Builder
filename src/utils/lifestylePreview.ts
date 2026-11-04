@@ -13,7 +13,7 @@ const installCompositor = (viewer: any) => {
   const uniforms = {
     portraitEnabled: { value: 0 }, portraitSceneDepth: { value: null as any },
     portraitCameraWorld: { value: new Matrix4() }, portraitProjectionInverse: { value: new Matrix4() },
-    portraitNearFar: { value: new Vector2() },
+    portraitNearFar: { value: new Vector2() }, portraitPixelWorld: { value: 0.01 },
     portraitRingInverse: { value: new Matrix4() }, portraitRadius: { value: 1 }, portraitFingerRadius: { value: 1 }, portraitBandHalfWidth: { value: 0 },
     portraitSkinLinear: { value: new Color() }, portraitRoomLinear: { value: new Color() },
     portraitPhotoTexture: { value: null as CanvasTexture | null }, portraitPhotoProjection: { value: new Matrix4() }, portraitReflectionsWeight: { value: 1 },
@@ -28,57 +28,58 @@ const installCompositor = (viewer: any) => {
   // A replaced extension after hot reload must bind its own uniform objects.
   const generation = viewer.__portraitCompositorGeneration = (viewer.__portraitCompositorGeneration ?? 0) + 1;
   post.addExtension({
-    uuid: "ring-lifestyle-portrait", customCacheKey: `ring-lifestyle-neutral-edges-v17-${generation}`, isCompatible: () => true,
+    uuid: "ring-lifestyle-portrait", customCacheKey: `ring-lifestyle-soft-occlusion-v18-${generation}`, isCompatible: () => true,
     extraUniforms: uniforms,
     parsFragmentSnippet: `uniform float portraitEnabled; uniform sampler2D portraitSceneDepth;
-      uniform mat4 portraitCameraWorld; uniform mat4 portraitProjectionInverse; uniform mat4 portraitRingInverse;
-      uniform vec2 portraitNearFar;
+      uniform highp mat4 portraitCameraWorld; uniform highp mat4 portraitProjectionInverse; uniform highp mat4 portraitRingInverse;
+      uniform highp vec2 portraitNearFar; uniform highp float portraitPixelWorld;
       uniform vec4 portraitPhotoSeat; uniform vec2 portraitPhotoAcross; uniform vec4 portraitPhotoFrame;
-      uniform float portraitRadius; uniform float portraitFingerRadius; uniform float portraitBandHalfWidth;
+      uniform highp float portraitRadius; uniform highp float portraitFingerRadius; uniform float portraitBandHalfWidth;
       uniform sampler2D portraitContactMap; uniform vec2 portraitContactRange;`,
     shaderExtender: (shader: any) => {
-      if (shader.fragmentShader.includes("float portraitPackedDepth")) return;
+      if (shader.fragmentShader.includes("portraitPackedDepth = texture2D")) return;
       shader.fragmentShader = shader.fragmentShader.replace("#glMarker", `
         if (portraitEnabled > 0.5) {
-          vec2 portraitPackedDepth = texture2D(portraitSceneDepth, vUv).xy;
-          float portraitDepth = pow(portraitPackedDepth.x + portraitPackedDepth.y / 255.0, 2.0);
+          highp vec2 portraitPackedDepth = texture2D(portraitSceneDepth, vUv).xy;
+          highp float portraitDepth = pow(portraitPackedDepth.x + portraitPackedDepth.y / 255.0, 2.0);
           // WebGI's G-buffer stores linear eye depth, not perspective depth.
-          float portraitDistance = mix(portraitNearFar.x, portraitNearFar.y, portraitDepth);
-          float portraitClipDepth = (portraitNearFar.y + portraitNearFar.x - 2.0 * portraitNearFar.x * portraitNearFar.y / max(portraitDistance, 0.0001)) / (portraitNearFar.y - portraitNearFar.x);
-          vec4 portraitWorld = portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, portraitClipDepth, 1.0);
-          vec3 portraitLocal = (portraitRingInverse * vec4(portraitWorld.xyz / portraitWorld.w, 1.0)).xyz;
+          highp float portraitDistance = mix(portraitNearFar.x, portraitNearFar.y, portraitDepth);
+          highp float portraitClipDepth = (portraitNearFar.y + portraitNearFar.x - 2.0 * portraitNearFar.x * portraitNearFar.y / max(portraitDistance, 0.0001)) / (portraitNearFar.y - portraitNearFar.x);
+          highp vec4 portraitWorld = portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, portraitClipDepth, 1.0);
+          highp vec3 portraitLocal = (portraitRingInverse * vec4(portraitWorld.xyz / portraitWorld.w, 1.0)).xyz;
           float portraitVisibility = 1.0 - step(0.99999, portraitDepth);
-          // The temporary finger writes real scene depth, but no beauty colour.
-          // Suppress its depth surface in the transparent ring-layer export.
-          portraitVisibility *= smoothstep(portraitFingerRadius * 1.001, portraitFingerRadius * 1.005, length(portraitLocal.xz));
           float portraitShadow = 0.0;
-          // Trace the actual camera ray against the finger volume. Comparing
-          // local Z with a front surface is only valid for a straight-on view;
-          // it clips the curved side of a tilted band into a flat metal strip.
-          vec4 portraitRayNear = portraitRingInverse * portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
-          vec4 portraitRayFar = portraitRingInverse * portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
-          vec3 portraitRayOrigin = portraitRayNear.xyz / portraitRayNear.w;
-          vec3 portraitRayDirection = normalize(portraitRayFar.xyz / portraitRayFar.w - portraitRayOrigin);
-          float portraitA = dot(portraitRayDirection.xz, portraitRayDirection.xz);
-          float portraitB = dot(portraitRayOrigin.xz, portraitRayDirection.xz);
-          float portraitC = dot(portraitRayOrigin.xz, portraitRayOrigin.xz) - portraitFingerRadius * portraitFingerRadius;
-          float portraitDiscriminant = portraitB * portraitB - portraitA * portraitC;
-          if (portraitDiscriminant > 0.0 && portraitA > 0.001) {
-            float portraitT = (-portraitB - sqrt(portraitDiscriminant)) / portraitA;
-            vec3 portraitSurface = portraitRayOrigin + portraitT * portraitRayDirection;
-            float portraitGeometryT = dot(portraitLocal - portraitRayOrigin, portraitRayDirection);
-            float portraitDepthFeather = max(portraitRadius * 0.004, fwidth(portraitGeometryT) * 0.7);
+          highp vec4 portraitRayNear = portraitRingInverse * portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
+          highp vec4 portraitRayFar = portraitRingInverse * portraitCameraWorld * portraitProjectionInverse * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
+          highp vec3 portraitRayOrigin = portraitRayNear.xyz / portraitRayNear.w;
+          highp vec3 portraitRayDirection = normalize(portraitRayFar.xyz / portraitRayFar.w - portraitRayOrigin);
+          highp float portraitA = dot(portraitRayDirection.xz, portraitRayDirection.xz);
+          if (portraitA > 0.001) {
+            // Closest approach avoids subtracting two large squared depths.
+            // That cancellation produced a cut at grazing angles on some GPUs.
+            highp float portraitCross = portraitRayOrigin.x * portraitRayDirection.z - portraitRayOrigin.z * portraitRayDirection.x;
+            highp vec2 portraitClosest = vec2(portraitRayDirection.z, -portraitRayDirection.x) * (portraitCross / portraitA);
+            highp float portraitClosestRadius = length(portraitClosest);
+            highp float portraitCenterT = -dot(portraitRayOrigin.xz, portraitRayDirection.xz) / portraitA;
+            highp float portraitHalfChord = sqrt(max(0.0, portraitFingerRadius * portraitFingerRadius - dot(portraitClosest, portraitClosest)) / portraitA);
+            highp float portraitT = portraitCenterT - portraitHalfChord;
+            highp vec2 portraitSurfaceXZ = portraitClosest - portraitHalfChord * portraitRayDirection.xz;
+            highp vec3 portraitSurface = vec3(portraitSurfaceXZ.x, portraitRayOrigin.y + portraitT * portraitRayDirection.y, portraitSurfaceXZ.y);
+            // Match the transition to actual patch pixels, not depth derivatives
+            // across unrelated surfaces. Packed-depth quantization is covered too.
+            highp float portraitFeather = clamp(max(portraitPixelWorld * 0.9, (portraitNearFar.y - portraitNearFar.x) / 32768.0), portraitRadius * 0.001, portraitRadius * 0.012);
+            highp float portraitCoverage = 1.0 - smoothstep(portraitFingerRadius - portraitFeather, portraitFingerRadius + portraitFeather, portraitClosestRadius);
             if (portraitT > 0.0 && abs(portraitSurface.y) < portraitRadius * 4.0) {
-              portraitVisibility *= smoothstep(-portraitDepthFeather, portraitDepthFeather, portraitT - portraitGeometryT);
-              // The real mesh supplies shadow coverage: a bypass opening or
-              // split/multiple rows must not cast a solid, straight band strip.
+              // Compare nearby surface points, rather than two long ray distances.
+              highp float portraitMargin = dot(portraitSurface - portraitLocal, portraitRayDirection);
+              portraitVisibility *= mix(1.0, smoothstep(-portraitFeather, portraitFeather, portraitMargin), portraitCoverage);
               vec2 portraitContactUv = vec2(atan(portraitSurface.x, portraitSurface.z) / 6.28318530718 + 0.5,
                 (portraitSurface.y - portraitContactRange.x) / portraitContactRange.y);
               vec2 portraitContactShape = texture2D(portraitContactMap, portraitContactUv).rg;
               float portraitContact = 0.19 * portraitContactShape.r + 0.07 * portraitContactShape.g;
               portraitContact *= step(0.0, portraitContactUv.y) * step(portraitContactUv.y, 1.0);
               float portraitSide = abs(portraitSurface.x) / portraitRadius;
-              portraitShadow = portraitContact * (0.8 + 0.35 * portraitSide);
+              portraitShadow = portraitContact * (0.8 + 0.35 * portraitSide) * portraitCoverage;
             }
           }
           // The photographed silhouette is the final occlusion boundary. A
@@ -119,7 +120,7 @@ const installSkinReflection = (roots: any[], uniforms: ReturnType<typeof install
       if (old.length) material.unregisterMaterialExtensions?.(old);
       let previousMode = -1;
       material.registerMaterialExtensions([{
-        uuid: "portrait-skin-bounce", customCacheKey: "portrait-photo-reflection-v4", isCompatible: () => true,
+        uuid: "portrait-skin-bounce", customCacheKey: "portrait-photo-reflection-v5", isCompatible: () => true,
         extraUniforms: {
           portraitMetalEnabled: uniforms.portraitEnabled, portraitMetalFrame: uniforms.portraitRingInverse,
           portraitMetalRadius: uniforms.portraitRadius, portraitMetalWidth: uniforms.portraitBandHalfWidth,
@@ -176,6 +177,15 @@ const installSkinReflection = (roots: any[], uniforms: ReturnType<typeof install
               float portraitSoftWindow = 0.45 + 0.55 * max(0.0, dot(portraitWorldNormal, normalize(vec3(-0.6, 0.8, 1.0))));
               // The soft fill retains the selected metal's spectral colour.
               reflectedLight.indirectSpecular += material.specularColor * portraitMetalRoom * (0.035 * portraitSoftWindow);
+              // The studio HDR's broad white window overpowers the metal colour
+              // at grazing angles. Keep that highlight, but retain the selected
+              // metal's spectral tint on the bevels and returning band edges.
+              // Diamonds use their own material and never receive this change.
+              float portraitGrazing = 1.0 - smoothstep(0.12, 0.78, clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0));
+              vec3 portraitMetalTint = material.specularColor / max(max(material.specularColor.r, material.specularColor.g), max(material.specularColor.b, 0.0001));
+              vec3 portraitEdgeTint = mix(vec3(1.0), portraitMetalTint, portraitGrazing * 0.88);
+              reflectedLight.indirectSpecular *= portraitEdgeTint;
+              reflectedLight.directSpecular *= portraitEdgeTint;
             }
           `);
         },
@@ -201,7 +211,7 @@ const balancePortraitEnvironment = (viewer: any, roots: any[], skin: Color, test
       if (!material || saved.has(material)) continue;
       saved.set(material, { roughness: material.roughness, intensity: material.envMapIntensity });
       if (!diamond && Number.isFinite(material.roughness)) material.roughness = Math.max(.085, material.roughness);
-      if (Number.isFinite(material.envMapIntensity)) material.envMapIntensity *= diamond ? Math.max(.94, brightness) : brightness * (test?.intensity ?? 1);
+      if (Number.isFinite(material.envMapIntensity)) material.envMapIntensity = diamond ? material.envMapIntensity * Math.max(.94, brightness) : brightness * (test?.intensity ?? material.envMapIntensity);
       material.uniformsNeedUpdate = true; material.setDirty?.();
     }
   }));
@@ -289,11 +299,12 @@ export async function captureLifestylePreview(viewer: any, roots: any[], id: str
             .multiply(new Matrix4().makeRotationX(photo.tilt * Math.PI / 180))
             .multiply(new Matrix4().makeRotationY(photo.roll * Math.PI / 180))
             .multiply(new Matrix4().makeRotationZ(photo.zTurn * Math.PI / 180));
-          // Occlude jewellery in the actual depth passes, preserving its bevels
-          // and sidewalls instead of cutting a finished picture into a strip.
+          // An inset depth core hides the rear geometry. The true finger edge
+          // is resolved analytically above, so its hard depth seam stays covered.
           const fingerMaterial = new MeshBasicMaterial({ color: 0x000000, colorWrite: false, depthWrite: true, depthTest: true, side: DoubleSide });
           fingerMaterial.userData.renderToDepth = true;
-          fingerDepth = new Mesh(new CylinderGeometry(radius * photo.fingerRadiusScale, radius * photo.fingerRadiusScale, radius * 8, 64, 1), fingerMaterial);
+          const coreRadius = radius * Math.min(photo.fingerRadiusScale, 1) * 0.985;
+          fingerDepth = new Mesh(new CylinderGeometry(coreRadius, coreRadius, radius * 8, 128, 1), fingerMaterial);
           fingerDepth.name = "portrait-finger-depth";
           rotation.decompose(fingerDepth.position, fingerDepth.quaternion, fingerDepth.scale);
           fingerDepth.frustumCulled = false;
@@ -340,6 +351,7 @@ export async function captureLifestylePreview(viewer: any, roots: any[], id: str
           uniforms.portraitPhotoProjection.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
           uniforms.portraitProjectionInverse.value.copy(camera.projectionMatrixInverse);
           uniforms.portraitNearFar.value.set(camera.near, camera.far);
+          uniforms.portraitPixelWorld.value = 2 * Math.abs(camera.position.z) / Math.max(0.0001, Math.abs(camera.projectionMatrix.elements[5])) / Math.max(1, viewer.renderer.renderSize.y);
         },
         capture: (renderer, source) => {
           // The ordinary read-buffer export bypasses WebGI's final screen

@@ -10,9 +10,11 @@ import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, OrthographicCamera, 
 const threeUrl = pathToFileURL(resolve("node_modules/three/build/three.module.js")).href;
 const mockSource = `export * from ${JSON.stringify(threeUrl)}; import {Vector3} from ${JSON.stringify(threeUrl)}; export class CameraController { constructor(camera) { this.cameraObject = camera; this.position = new Vector3(); this.target = new Vector3(); } dispose() { this.disposed = true; } }`;
 const source = await readFile(resolve("src/utils/ringPreview.ts"), "utf8");
+const metadata = ts.transpileModule(await readFile(resolve("src/config/ringPreviews.ts"), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
 const tempPath = join(tmpdir(), `ring-preview-${randomUUID()}.mjs`);
 const output = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
-  .replace('"webgi"', JSON.stringify(`data:text/javascript;base64,${Buffer.from(mockSource).toString("base64")}`));
+  .replace('"webgi"', JSON.stringify(`data:text/javascript;base64,${Buffer.from(mockSource).toString("base64")}`))
+  .replaceAll('"../config/ringPreviews"', JSON.stringify(`data:text/javascript;base64,${Buffer.from(metadata).toString("base64")}`));
 await writeFile(tempPath, output);
 let preview;
 try { preview = await import(pathToFileURL(tempPath).href); }
@@ -20,6 +22,19 @@ finally { await unlink(tempPath); }
 
 assert.deepEqual(preview.getRingPreviewViews(false).map(view => view.id), ["three-quarter", "top", "profile"]);
 assert.deepEqual(preview.getRingPreviewViews(true).map(view => view.id), ["three-quarter", "top", "engraving"], "only the fourth tile becomes the inscription detail");
+const { getPortraitPreviewKey } = await import(`data:text/javascript;base64,${Buffer.from(metadata).toString("base64")}`);
+const visibleDesign = { headFile: "round.glb", shankFile: "pave.glb", headScale: .1, shankScale: .1, headMetalHex: "#ffffff", shankMetalHex: "#ffd785", engraving: [] };
+const portraitEnvironment = { url: "metal-1.exr", rotation: 0, intensity: 1 };
+const portraitKey = getPortraitPreviewKey(visibleDesign, portraitEnvironment);
+for (const engraving of [[], [{ text: "Love", position: "bottom", font: "script" }], [{ text: "Always", position: "left", font: "modern" }]]) {
+  assert.equal(getPortraitPreviewKey({ ...visibleDesign, engraving }, portraitEnvironment), portraitKey, "invisible engraving edits reuse the hand portraits");
+}
+for (const change of [{ headFile: "oval.glb" }, { shankFile: "bypass.glb" }, { headScale: .2 }, { shankScale: .2 }, { headMetalHex: "#ffd785" }, { shankMetalHex: "#ffffff" }]) {
+  assert.notEqual(getPortraitPreviewKey({ ...visibleDesign, ...change }, portraitEnvironment), portraitKey, "visible ring changes regenerate portraits");
+}
+for (const change of [{ url: "metal-2.exr" }, { rotation: 45 }, { intensity: .8 }]) {
+  assert.notEqual(getPortraitPreviewKey(visibleDesign, { ...portraitEnvironment, ...change }), portraitKey, "portrait lighting changes invalidate the portrait cache");
+}
 
 // Fit the complete ring for wide, square, and narrow photo tiles.
 const bounds = new Box3(new Vector3(-2, -1, -0.3), new Vector3(2, 4, 0.3));

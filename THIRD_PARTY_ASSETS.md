@@ -11,3 +11,5 @@ The user-provided `female_hand.glb` identifies the following source in its embed
 The web copy preserves the geometry, embedded textures and original attribution. Its legacy specular/glossiness material is converted to a metallic/roughness material for compatibility. The source file in Downloads is unchanged. Attribution is recorded in this document and the model's embedded metadata.
 
 This is a noncommercial sample asset according to its metadata. A commercial release needs an appropriate license for the hand asset.
+
+Engraving uses Latin subsets of Cormorant Garamond, Lato, Allura, and Courier Prime from the official Google Fonts repository. Each font is distributed under the SIL Open Font License; its copyright notice and license are included beside the source fonts and copied to `dist/assets/engraving-font-licenses/` in production builds. The app uses internal family aliases for these subsets.

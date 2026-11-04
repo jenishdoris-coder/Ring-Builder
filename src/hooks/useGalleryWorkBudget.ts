@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export function useGalleryWorkBudget() {
   const [scrolling, setScrolling] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(true);
+  const [pageVisible, setPageVisible] = useState(() => document.visibilityState !== "hidden");
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let moving = false;
@@ -16,10 +17,12 @@ export function useGalleryWorkBudget() {
     // Scroll does not bubble from an overflow container; capture is needed for
     // the desktop gallery as well as the mobile document.
     window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    const onVisibility = () => setPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onVisibility);
     const tile = document.querySelector(".product-live-tile");
     const observer = new IntersectionObserver(entries => setViewerVisible(entries.some(entry => entry.isIntersecting)), { threshold: .01 });
     if (tile) observer.observe(tile);
-    return () => { clearTimeout(timer); observer.disconnect(); window.removeEventListener("scroll", onScroll, true); };
+    return () => { clearTimeout(timer); observer.disconnect(); window.removeEventListener("scroll", onScroll, true); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
-  return { scrolling, viewerVisible };
+  return { scrolling, viewerVisible, pageVisible };
 }

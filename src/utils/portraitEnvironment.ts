@@ -1,3 +1,4 @@
+/** Portrait rotation is in degrees, matching the environment editor. */
 export type PortraitEnvironment = { url: string; rotation: number; intensity: number; photoReflections: boolean };
 
 const caches = new WeakMap<object, Map<string, any>>();
@@ -13,6 +14,6 @@ export async function loadPortraitEnvironment(viewer: any, importer: any, url: s
   if (!importer?.importSinglePath) throw new Error("Environment importer is unavailable.");
   const asset = await importer.importSinglePath(url);
   cache.set(url, asset);
-  while (cache.size > 2) { const first = cache.keys().next().value!; cache.get(first)?.dispose?.(); cache.delete(first); }
+  while (cache.size > 2) { const first = cache.keys().next().value!; const old=cache.get(first); if(old!==viewer.scene.environment)old?.dispose?.(); cache.delete(first); }
   return asset;
 }

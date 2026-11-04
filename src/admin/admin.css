@@ -96,3 +96,5 @@ body:has(.admin-root) #canvas-container, body:has(.admin-login) #canvas-containe
 .admin-delete-undo { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #8d9ba9; margin-top: 18px; }
 
 .admin-table-card td:last-child > .admin-row-edit { display: inline-flex; margin-right: 16px; }
+.admin-file-cell strong { max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-cleanup-note { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; margin-bottom: 20px; border: 1px solid #e8dfca; border-radius: 8px; background: #fcf8ef; font-size: 11px; color: #978365; }

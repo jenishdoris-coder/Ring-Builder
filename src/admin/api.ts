@@ -1,9 +1,10 @@
 import type { RingCatalog } from "../types/catalog";
 export interface AdminSession { username: string; csrf: string; expires: number; }
 export interface AdminState {
-  active: RingCatalog; draft: RingCatalog; revision: number; hasDraft: boolean; savedAt: string | null; publishedAt: string | null; baseReleaseId: string;
+  active: RingCatalog; catalog: RingCatalog; revision: number; hasUnpublishedChanges: boolean; publishedAt: string | null; baseReleaseId: string;
   activity: { type: string; message: string; username: string; createdAt: string }[];
   storage: { count: number; bytes: number }; connections: { database: boolean; uploads: boolean };
+  cleanup: {pending:number}; removedAssets?:number;
 }
 export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
 export const adminRequest = async <T>(action: string, session?: AdminSession | null, data?: unknown): Promise<T> => {
@@ -13,12 +14,13 @@ export const adminRequest = async <T>(action: string, session?: AdminSession | n
   if (!response.ok) throw new ApiError(result.error || "The request failed.", response.status);
   return result as T;
 };
-export const uploadAsset = async (file: File, kind: "model" | "image", session: AdminSession, progress: (percent: number) => void): Promise<{ url: string; filename: string }> => {
+export const uploadAsset = async (file: File, kind: "model" | "image", session: AdminSession, progress: (percent: number) => void, idempotencyKey?: string, modelFile?:string): Promise<{ url: string; filename: string }> => {
   if (kind === "model") {
     const header = new DataView(await file.slice(0, 12).arrayBuffer());
     if (header.byteLength !== 12 || header.getUint32(0, true) !== 0x46546c67 || header.getUint32(4, true) !== 2 || header.getUint32(8, true) !== file.size) throw new Error("Choose a complete GLB 2.0 file.");
   }
-  const ticket = await adminRequest<{ id: string; uploadUrl: string; contentType: string }>("upload", session, { filename: file.name, bytes: file.size, kind });
+  const ticket = await adminRequest<{ id: string; uploadUrl: string; contentType: string; asset?: {url:string;filename:string} }>("upload", session, { filename: file.name, bytes: file.size, kind, ...(idempotencyKey ? { idempotencyKey } : {}),...(modelFile?{modelFile}:{}) });
+  if (ticket.asset) { progress(100); return ticket.asset; }
   await new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("PUT", ticket.uploadUrl);

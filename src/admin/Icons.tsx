@@ -1,5 +1,6 @@
-export type IconName = "diamond" | "overview" | "band" | "head" | "metal" | "assets" | "settings" | "publish" | "arrow" | "plus" | "search" | "close" | "check" | "logout" | "external" | "upload" | "menu" | "edit" | "pricing" | "trash" | "undo";
+export type IconName = "diamond" | "overview" | "band" | "head" | "metal" | "assets" | "settings" | "publish" | "arrow" | "plus" | "search" | "close" | "check" | "logout" | "external" | "upload" | "menu" | "edit" | "pricing" | "trash" | "undo" | "expand";
 const paths: Record<IconName, string> = {
+  expand:"M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6",
   trash: "M4 7h16M9 7V3h6v4M6 7l1 14h10l1-14M10 11v6M14 11v6",
   undo: "M3 10h11a6 6 0 0 1 0 12M3 10l5-5M3 10l5 5",
   pricing: "M14 3H6v18h12V7Zm0 0v5h4M9 12h6M9 16h6",

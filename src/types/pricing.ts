@@ -5,7 +5,8 @@ export interface ComponentPrice {
   fixedPrice?: number;
   metalPrices?: Record<string, number>;
 }
-export interface PublicPricing { enabled: boolean; currency: string; sizeSystem: PricingConfig["sizeSystem"]; sizes: string[]; defaultSize: string; }
+export interface PublicPricing { enabled: boolean; currency: string; sizeSystem: PricingConfig["sizeSystem"]; sizes: string[]; defaultSize: string; revision?: string; }
+export interface PriceBreakdownLine { label: string; amount: number; }
 export interface PricingConfig {
   enabled: boolean;
   currency: string;

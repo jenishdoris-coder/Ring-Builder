@@ -20,14 +20,14 @@ export const useCatalog = (onError?: (message: string) => void) => {
     let lastRequest = 0;
     let stopped = false;
     const refresh = (force = false) => {
-      if (stopped || !force && Date.now() - lastRequest < 1000) return;
+      if (stopped || !force && Date.now() - lastRequest < (draft ? 1000 : 30000)) return;
       lastRequest = Date.now();
       controller?.abort(); window.clearTimeout(timeout);
       const request = new AbortController(); controller = request;
       timeout = window.setTimeout(() => request.abort(),12000);
       const path = demo ? "/api/pricing-demo" : draft ? "/api/admin?action=preview" : "/api/catalog";
       const url = force ? `${path}${path.includes("?") ? "&" : "?"}refresh=${Date.now()}` : path;
-      fetch(url, { signal: request.signal, cache:"no-store", headers: { Accept: "application/json" } })
+      fetch(url, { signal: request.signal, cache: draft || demo || force ? "no-store" : "default", headers: { Accept: "application/json" } })
       .then(async response => {
         let fromDraft = draft && !demo;
         if (fromDraft && (response.status === 401 || response.status === 403)) {
@@ -54,7 +54,7 @@ export const useCatalog = (onError?: (message: string) => void) => {
     window.addEventListener("pageshow",focus);
     document.addEventListener("visibilitychange",visible);
     window.addEventListener("storage",storage);
-    refresh(true);
+    refresh();
     return () => { stopped = true; window.clearTimeout(timeout); controller?.abort(); channel?.close(); window.removeEventListener("focus",focus); window.removeEventListener("pageshow",focus); document.removeEventListener("visibilitychange",visible); window.removeEventListener("storage",storage); };
   }, [onError]);
   return catalog;

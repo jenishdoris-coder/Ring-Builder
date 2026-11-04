@@ -1,0 +1,10 @@
+@font-face { font-family: 'RB Classic'; src: url('../assets/engraving-fonts/classic.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'RB Modern'; src: url('../assets/engraving-fonts/modern.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'RB Script'; src: url('../assets/engraving-fonts/script.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'RB Typewriter'; src: url('../assets/engraving-fonts/typewriter.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+.engraving-font-options { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; margin: 9px 0 12px; }
+.engraving-font-options > button { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; padding: 9px 3px; border: 1px solid #e0e4eb; border-radius: 7px; background: #fff; color: #66758a; cursor: pointer; }
+.engraving-font-options > button[aria-pressed=true] { border-color: #263550; color: #263550; background: #f6f8fb; }
+.engraving-font-options strong { font-size: 22px; line-height: 1.25; font-weight: 400; }
+.engraving-font-options small { font: 10px 'Segoe UI',Arial,sans-serif; }
+.engraving-font-error { margin: 12px 0; color: #a45b4e; font-size: 12px; }

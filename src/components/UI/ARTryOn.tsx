@@ -4,7 +4,8 @@ import type { SelectedRing } from '../../../ar/src/selected-ring';
 import type { RingEngravingConfig } from '../../config/engraving';
 import '../../styles/arOverlay.css';
 
-const ARExperience = lazy(() => import('../../../ar/src/ARExperience'));
+export const preloadARTryOn=()=>import('../../../ar/src/ARExperience');
+const ARExperience = lazy(preloadARTryOn);
 
 export function ARTryOn({ selection, engraving, onClose }: { selection: SelectedRing; engraving: RingEngravingConfig[]; onClose: () => void }) {
   const dialog = useRef<HTMLDivElement>(null);

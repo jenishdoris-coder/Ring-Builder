@@ -56,6 +56,32 @@ export const quoteRing = (catalog: RingCatalog, selection: PriceSelection, confi
   }
   return quote;
 };
+
+/** Customer selling prices, including the multiplier. Raw costs and rates
+ * remain on the server. Allocate currency rounding so the rows sum exactly. */
+export const customerQuote = (quote: PriceQuote) => {
+  const breakdown: { label: string; amount: number }[] = [];
+  if (quote.total !== null) {
+    const groups = [
+      { label: "Center diamond", amount: 0 },
+      { label: "Head setting", amount: 0 },
+      { label: "Band", amount: 0 },
+    ];
+    for (const line of quote.lines) {
+      const index = line.label === "Center diamond" ? 0 : /^Head(?: |$)/.test(line.label) ? 1 : 2;
+      groups[index].amount += line.amount;
+    }
+    const digits = new Intl.NumberFormat("en-US", { style: "currency", currency: quote.currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    const factor = 10 ** digits;
+    const units = groups.map(line => line.amount * quote.multiplier * factor);
+    const rounded = units.map(value => Math.floor(value));
+    const order = units.map((value, index) => ({ index, fraction: value - rounded[index] })).sort((a, b) => b.fraction - a.fraction);
+    const remainder = Math.round(quote.total * factor) - rounded.reduce((sum, value) => sum + value, 0);
+    for (let index = 0; index < remainder; index++) rounded[order[index % order.length].index]++;
+    groups.forEach((line, index) => breakdown.push({ label: line.label, amount: rounded[index] / factor }));
+  }
+  return { total: quote.total, currency: quote.currency, enabled: true, breakdown };
+};
 /** Empty fields stay unconfigured; zero is an intentional value, not a fallback. */
 export const validatePricing = (input: unknown): string[] => {
   if (input === undefined) return [];

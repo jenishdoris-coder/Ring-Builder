@@ -3,10 +3,14 @@ import { readFile } from "node:fs/promises";
 import { createHmac, scryptSync } from "node:crypto";
 import ts from "typescript";
 const moduleUrl = async path => {
-  const source = await readFile(new URL(path, import.meta.url), "utf8");
+  const url=new URL(path,import.meta.url);
+  const source = await readFile(url, "utf8");
+  if(url.pathname.endsWith('.json'))return `data:text/javascript;base64,${Buffer.from('export default '+source).toString('base64')}`;
   let output = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
-  if (path.endsWith("/catalog.ts")) output = output.replace('"../utils/ringPricing.js"', JSON.stringify(await moduleUrl("../src/utils/ringPricing.ts")));
-  if (path.endsWith("/deletion.ts")) output = output.replace('"./catalog"',JSON.stringify(await moduleUrl("../src/admin/catalog.ts"))).replace('"../utils/ringPricing"',JSON.stringify(await moduleUrl("../src/utils/ringPricing.ts")));
+  for(const match of [...output.matchAll(/from\s+["'](\.[^"']+)["']/g)]){
+    const spec=match[1],dependency=new URL(spec.endsWith('.json')?spec:spec.endsWith('.js')?spec.slice(0,-3)+'.ts':spec+'.ts',url);
+    output=output.replace(match[0],`from ${JSON.stringify(await moduleUrl(dependency.href))}`);
+  }
   return `data:text/javascript;base64,${Buffer.from(output).toString("base64")}`;
 };
 const moduleAt = async path => import(await moduleUrl(path));
@@ -15,6 +19,18 @@ const source = JSON.parse(await readFile(new URL("../src/config/catalog.json", i
 const prefix = "https://assets.example.com/ring-builder/releases/test/";
 const catalog = { ...source, schemaVersion: 1, releaseId: "test", assetBaseUrl: prefix.slice(0,-1), shapes: source.shapes.map(shape => ({ ...shape, carats: shape.carats.map(head => ({ ...head, file: prefix + head.file.slice(1) })) })), shanks: source.shanks.map(band => ({ ...band, file: prefix + band.file.slice(1) })) };
 assert.deepEqual(validateCatalog(catalog, [prefix]), []);
+const {DEFAULT_APPEARANCE,studioEnvironment,portraitEnvironment}=await moduleAt('../src/config/appearance.ts');
+assert.equal(studioEnvironment({id:'metal-env-1',rotation:90,intensity:.8}).rotation,Math.PI/2,'live environment rotation converts degrees once');
+assert.equal(portraitEnvironment({id:'metal-env-1',rotation:90,intensity:.8}).rotation,90,'portrait controls retain degrees for the capture pipeline');
+const styled=structuredClone(catalog);styled.appearance=structuredClone(DEFAULT_APPEARANCE);
+assert.deepEqual(validateCatalog(styled,[prefix]),[],'default Satin Silver appearance validates');
+styled.appearance.studio={id:'metal-env-8',rotation:45,intensity:.8};
+assert.equal(publicCatalog(styled).appearance.studio.id,'metal-env-8','studio and hand lighting are published independently');
+assert.equal(styled.appearance.portraits.id,'metal-env-1');
+styled.appearance.studio.id='unknown-environment';
+assert.ok(validateCatalog(styled,[prefix]).some(e=>e.includes('environment')),'unknown environment IDs are rejected');
+styled.appearance=structuredClone(DEFAULT_APPEARANCE);styled.appearance.thumbnails.mode='hdr';
+assert.ok(validateCatalog(styled,[prefix]).some(e=>e.includes('Generate')),'HDR styles cannot save with stale or missing thumbnails');
 const invalid = change => { const next = structuredClone(catalog); change(next); assert.ok(validateCatalog(next, [prefix]).length); };
 invalid(next => { next.shanks[0].file = "https://untrusted.example/model.glb"; });
 invalid(next => { next.shanks[0].file = "javascript:alert(1)"; });
@@ -31,7 +47,7 @@ hidden.shanks.find(item => item.id !== hidden.defaults.shankId).enabled = false;
 hidden.shapes.find(item => item.id !== hidden.defaults.shapeId).carats[0].enabled = false;
 assert.equal(storefrontCatalog(hidden).shanks.length, catalog.shanks.length - 1);
 assert.deepEqual(validateCatalog(hidden, [prefix]), []);
-const { emptyPricing, quoteRing, headPriceKey, bandPriceKey, componentPricingOnly } = await moduleAt("../src/utils/ringPricing.ts");
+const { emptyPricing, quoteRing, customerQuote, headPriceKey, bandPriceKey, componentPricingOnly } = await moduleAt("../src/utils/ringPricing.ts");
 const p = emptyPricing();
 assert.equal(p.currency,"USD");
 p.enabled=true; p.multiplier=1.5; p.diamondPerCarat=1000; p.accentDiamondPerCarat=200;
@@ -43,6 +59,16 @@ const selection={shapeId:"round",carat:2,headStyleId:"4-prong-talon",bandId:"tra
 let quote=quoteRing(catalog,selection,p);
 assert.equal(quote.total,3825,"sum center, separate head/band metals, accent diamonds and finishes before applying multiplier once");
 assert.equal(quote.goldGrams,4);
+const customer = customerQuote(quote);
+assert.deepEqual(customer.breakdown, [{label:"Center diamond",amount:3000},{label:"Head setting",amount:195},{label:"Band",amount:630}]);
+assert.equal(customer.breakdown.reduce((sum,line)=>sum+line.amount,0),customer.total);
+assert.equal(customer.multiplier,undefined,"the public breakdown never exposes the multiplier");
+assert.equal(customer.lines,undefined,"the public breakdown never exposes raw material costs");
+for (const currency of ["USD","JPY","KWD"]) {
+  const rounded=customerQuote({...quote,currency,total:currency==="JPY" ? 3 : currency==="KWD" ? 3.002 : 3.01,multiplier:1,lines:[{label:"Center diamond",amount:1.004},{label:"Head gold",amount:.999},{label:"Band",amount:.999}]});
+  assert.ok(Math.abs(rounded.breakdown.reduce((sum,line)=>sum+line.amount,0)-rounded.total)<1e-9,"rounded component prices sum to the total in every currency");
+}
+assert.deepEqual(customerQuote({...quote,total:null}).breakdown,[],"an incomplete quote never shows a misleading partial breakdown");
 assert.ok(Math.abs(quote.diamondCarats-2.3)<1e-9);
 assert.equal(quoteRing(catalog,{...selection,size:"8"},p).total,4005,"band size changes measured weights only");
 p.centerRates["round|2"]=1500;

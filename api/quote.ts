@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PriceSelection } from "../src/types/pricing.js";
 import { database } from "../server/db.js";
 import { readSession, sameOrigin } from "../server/adminAuth.js";
-import { quoteRing } from "../src/utils/ringPricing.js";
+import { customerQuote, quoteRing } from "../src/utils/ringPricing.js";
 
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
   response.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -32,7 +32,6 @@ export default async function handler(request: IncomingMessage, response: Server
     const catalog = document?.catalog || await db.collection<any>("ring_builder_catalogs").findOne({ _id:"active" });
     if (!catalog?.pricing?.enabled) return send(200, { total:null, currency:catalog?.pricing?.currency || "USD", enabled:false });
     const quote = quoteRing(catalog,s);
-    // Never disclose material costs, weight tables, margins or the multiplier.
-    return send(200, { total:quote.total, currency:quote.currency, enabled:true });
+    return send(200, customerQuote(quote));
   } catch (error) { if (error instanceof SyntaxError) return send(400,{error:"Invalid selection"}); console.error("Price quote failed", error instanceof Error ? error.name : "UnknownError"); return send(503, { error:"Price is temporarily unavailable" }); }
 }

@@ -1,5 +1,5 @@
 import { Box3, CanvasTexture, DoubleSide, LinearFilter, LinearMipmapLinearFilter, Matrix3, Matrix4, Raycaster, Vector3, Vector4, type MaterialExtension } from "webgi";
-import { ENGRAVING_POSITIONS, normalizeEngravingText, type EngravingPosition, type RingEngravingConfig } from "../config/engraving";
+import { ENGRAVING_POSITIONS, engravingFont,normalizeEngravingText, type EngravingPosition, type RingEngravingConfig } from "../config/engraving";
 import { isDiamondMesh } from "./meshUtils";
 import { fitCameraToPoints, type RingCameraPose } from "./ringCameraViews";
 
@@ -33,7 +33,7 @@ export class RingEngraving {
   constructor(private channel = "") {}
   active = false;
   revision = 0;
-  matches(config: RingEngravingConfig | null) { return this.active && config?.text === this.config?.text && config?.position === this.config?.position; }
+  matches(config: RingEngravingConfig | null) { return this.active && config?.text === this.config?.text && config?.position === this.config?.position && engravingFont(config?.font).id===engravingFont(this.config?.font).id; }
   private config: RingEngravingConfig | null = null;
   private root: any;
   private layout?: Layout;
@@ -47,11 +47,11 @@ export class RingEngraving {
   private strips = new WeakMap<object, Map<string, Surface[]>>();
   private probes = new WeakMap<object, Map<string, { point: Vector3; alignment: number } | null>>();
 
-  private createMask(text: string) {
-    if (this.config?.text === text && this.texture) return;
+  private createMask(text: string,fontId?:string) {
+    if (this.config?.text === text && engravingFont(this.config?.font).id===engravingFont(fontId).id && this.texture) return;
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d")!;
-    const font = '500 360px Georgia, "Times New Roman", serif';
+    const font = `400 360px "${engravingFont(fontId).family}"`;
     context.font = font;
     const measure = context.measureText(text);
     canvas.width = Math.max(256, Math.min(4096, 2 ** Math.ceil(Math.log2(measure.width + 128))));
@@ -266,7 +266,7 @@ export class RingEngraving {
   }
 
   apply(root: any, config: RingEngravingConfig | null): "idle" | "ready" | "unavailable" {
-    if (this.active && root === this.root && config?.text === this.config?.text && config?.position === this.config?.position) {
+    if (this.active && root === this.root && this.matches(config)) {
       let intact = true;
       root.traverse((mesh: any) => {
         if (!mesh.isMesh || isDiamondMesh(mesh)) return;
@@ -282,7 +282,7 @@ export class RingEngraving {
     this.root = root;
     if (!config || !root) { this.config = null; this.layout = undefined; return "idle"; }
     const text = normalizeEngravingText(config.text);
-    this.createMask(text);
+    this.createMask(text,config.font);
     this.config = { ...config, text };
     const surface = this.surfaceFor(root, config.position);
     this.layout = surface && this.createLayout(surface);

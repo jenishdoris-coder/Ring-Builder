@@ -9,14 +9,19 @@ loadCloudEnv();
 const root = resolve("public");
 const source = JSON.parse(await readFile("src/config/catalog.json", "utf8"));
 const thumbnails = JSON.parse(await readFile("src/config/modelThumbnails.json", "utf8"));
-const activeThumbnails = new Set(Object.values(thumbnails.images).map(path => path.replace(/^\//, "")));
+const activeThumbnails = new Set(Object.values(thumbnails.images).filter(path => !/^https:\/\//i.test(path)).map(path => path.replace(/^\//, "")));
 const sha256 = data => createHash("sha256").update(data).digest("hex");
 const types = { ".glb": "model/gltf-binary", ".exr": "image/x-exr", ".webp": "image/webp", ".png": "image/png", ".js": "application/javascript", ".wasm": "application/wasm", ".json": "application/json" };
 async function inventory(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const absolute = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await inventory(absolute));
+    if (entry.isDirectory()) {
+      const directoryPath = relative(root, absolute).replaceAll("\\", "/");
+      // Local experiments and comparison maps are not website release assets.
+      if (["video-test", "environments/metal-test"].includes(directoryPath)) continue;
+      files.push(...await inventory(absolute));
+    }
     else if (entry.isFile()) {
       const assetPath = relative(root, absolute).replaceAll("\\", "/");
       // Keep older local thumbnail versions for reuse without republishing them.
@@ -40,7 +45,7 @@ if (!localFiles.has("/models/hand/female_hand.glb")) throw new Error("The hand p
 for (const [kind, models] of [["head", source.shapes.flatMap(shape => shape.carats)], ["shank", source.shanks]]) {
   for (const model of models) if (!thumbnails.images[`${kind}:${model.file}`]) throw new Error(`Generate a static thumbnail before publishing: ${model.file}`);
 }
-for (const path of Object.values(thumbnails.images)) if (!localFiles.has(path)) throw new Error(`Static thumbnail is missing: ${path}. Run npm run thumbnails:generate.`);
+for (const path of Object.values(thumbnails.images)) if (!/^https:\/\//i.test(path) && !localFiles.has(path)) throw new Error(`Static thumbnail is missing: ${path}. Run npm run thumbnails:generate.`);
 for (const path of [...source.shapes.flatMap(shape => shape.carats.map(carat => carat.file)), ...source.shanks.map(shank => shank.file), "/metal_env.exr", "/diamond_env.exr", ...source.shapes.map(shape => `/images/diamond-shapes/${shape.id}.webp`), "/draco/draco_decoder.wasm", "/draco/draco_wasm_wrapper.js"]) {
   if (!localFiles.has(path)) throw new Error(`Required asset is missing: ${path}`);
 }

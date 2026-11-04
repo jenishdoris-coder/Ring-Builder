@@ -1,4 +1,5 @@
-export interface PublicRingQuote { total: number | null; currency: string; enabled: boolean; }
+import type { PriceBreakdownLine } from "../types/pricing";
+export interface PublicRingQuote { total: number | null; currency: string; enabled: boolean; breakdown?: PriceBreakdownLine[]; }
 export interface QuoteRequest {
   endpoint: string; body: string; currency: string; signal: AbortSignal;
   fetcher?: typeof fetch; timeoutMs?: number; retryDelayMs?: number; method?: "GET" | "POST";
@@ -35,7 +36,12 @@ export async function requestRingQuote({ endpoint, body, currency, signal, fetch
       const quote = data as Partial<PublicRingQuote> | null;
       if (!quote || typeof quote !== "object" || (quote.total !== null && (typeof quote.total !== "number" || !Number.isFinite(quote.total) || quote.total < 0))
         || (quote.currency !== undefined && (typeof quote.currency !== "string" || !/^[A-Z]{3}$/.test(quote.currency)))) throw new Error("Invalid quote response");
-      return { total: quote.total, currency: quote.currency || currency, enabled: quote.enabled !== false };
+      const breakdown = quote.breakdown;
+      if (breakdown !== undefined) {
+        if (!Array.isArray(breakdown) || breakdown.length > 20 || breakdown.some(line => !line || typeof line.label !== "string" || line.label.length > 100 || !Number.isFinite(line.amount) || line.amount < 0)) throw new Error("Invalid price breakdown");
+        if (quote.total !== null && breakdown.length && Math.abs(breakdown.reduce((sum, line) => sum + line.amount, 0) - quote.total!) > .001) throw new Error("Price breakdown does not match total");
+      }
+      return { total: quote.total, currency: quote.currency || currency, enabled: quote.enabled !== false, ...(breakdown ? { breakdown } : {}) };
     } catch (error) {
       if (signal.aborted) throw new DOMException("Quote cancelled", "AbortError");
       if (!retryable || attempt === 1) throw error;

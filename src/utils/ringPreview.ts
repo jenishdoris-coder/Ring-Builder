@@ -1,21 +1,8 @@
 import { Box3, CameraController, DoubleSide, Euler, Matrix4, MeshBasicMaterial, PerspectiveCamera, Quaternion, Vector3 } from "webgi";
 import type { RingCameraPose } from "./ringCameraViews";
 import type { EngravingPosition } from "../config/engraving";
-import type { PortraitFit } from "../config/portraitFit";
-import type { PortraitEnvironment } from "./portraitEnvironment";
-
-export type RingPreviewImage = { id: string; label: string; url: string; width?: number; height?: number; engravingPosition?: EngravingPosition };
-export type RingDetailPreviewRequest = { key: string; viewId: string; resolution: number; engravingPosition?: EngravingPosition; portraitFit?: PortraitFit; environment?: PortraitEnvironment };
-export const RING_PREVIEW_RESOLUTION = 1200;
-export const RING_PREVIEW_VERSION = "studio-1200-balanced-resting-v17";
-
-/** Render just the enlarged photograph at a resolution suited to 3x zoom. */
-export const getRingDetailResolution = () => {
-  const mobile = window.innerWidth <= 768;
-  const constrained = (navigator.hardwareConcurrency || 4) <= 8;
-  const required = Math.ceil(Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8) * Math.min(window.devicePixelRatio || 1, 2) * 3 / 256) * 256;
-  return Math.min(constrained ? 1792 : 2048, Math.max(mobile ? 1600 : 1792, required));
-};
+import { RING_PREVIEW_RESOLUTION, RING_PREVIEW_VIEWS, getRingPreviewViews, type RingPreviewImage } from "../config/ringPreviews";
+export * from "../config/ringPreviews";
 
 const imageJobTails = new WeakMap<object, Promise<void>>();
 /** Captures and their cleanup must finish serially on the shared renderer. */
@@ -31,16 +18,6 @@ export async function runRingImageJob<T>(viewer: object, signal: AbortSignal, jo
     return await job();
   } finally { release(); if (imageJobTails.get(viewer) === tail) imageJobTails.delete(viewer); }
 }
-
-export const RING_PREVIEW_VIEWS = [
-  { id: "three-quarter", label: "Three-quarter view", direction: [0.8, 0.4, -1], up: [0, 1, 0], lying: false },
-  { id: "top", label: "Diamond view", direction: [1, 0.16, 0], up: [0, 1, 0], lying: true },
-  { id: "profile", label: "Side profile", direction: [0.08, 0.38, 1], up: [0, 1, 0], lying: true },
-] as const;
-
-export const getRingPreviewViews = (engraved: boolean) => engraved
-  ? [...RING_PREVIEW_VIEWS.slice(0, 2), { ...RING_PREVIEW_VIEWS[2], id: "engraving", label: "Engraving detail" }]
-  : [...RING_PREVIEW_VIEWS];
 
 const saveTransform = (object: any) => ({
   position: object.position.clone(), quaternion: object.quaternion.clone(), scale: object.scale.clone(),

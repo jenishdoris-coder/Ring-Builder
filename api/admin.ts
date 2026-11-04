@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { database } from "../server/db.js";
 import { adminConfigured, equal, newSession, passwordMatches, readSession, sameOrigin, writeSessionCookie } from "../server/adminAuth.js";
-import { AdminError, adminState, fail, publishDraft, saveDraft } from "../server/adminStore.js";
+import { AdminError, adminState, fail, publishCatalog } from "../server/adminStore.js";
 import { beginUpload, finishUpload } from "../server/adminUploads.js";
+import {processAssetCleanup} from '../server/adminAssets.js';
 import { publicCatalog, storefrontCatalog } from "../src/admin/catalog.js";
 
 const body = async (request: IncomingMessage) => {
@@ -50,7 +51,7 @@ export default async function handler(request: IncomingMessage, response: Server
     if (action === "state" && method === "GET") return send(await adminState());
     if (action === "preview" && method === "GET") {
       const state = await adminState();
-      return send(publicCatalog(storefrontCatalog({ ...state.draft,releaseId:`${state.draft.releaseId}-draft-${state.revision}` })));
+      return send(publicCatalog(storefrontCatalog({ ...state.catalog,releaseId:`${state.catalog.releaseId}-admin-${state.revision}` })));
     }
     if (action === "assets" && method === "GET") {
       const search = (url.searchParams.get("search") || "").slice(0, 100), page = Math.max(0, Math.min(10000, Number(url.searchParams.get("page")) || 0));
@@ -60,8 +61,8 @@ export default async function handler(request: IncomingMessage, response: Server
       return send({ items, total });
     }
     const input = method === "POST" ? await body(request) as any : {};
-    if (action === "save" && method === "POST") return send(await saveDraft(input.catalog, input.revision, session.username));
-    if (action === "publish" && method === "POST") return send(await publishDraft(input.revision, session.username));
+    if (action === "publish" && method === "POST") return send(await publishCatalog(input.catalog, input.revision, input.baseReleaseId, session.username));
+    if (action === "cleanup" && method === "POST") return send(await processAssetCleanup());
     if (action === "upload" && method === "POST") return send(await beginUpload(input, session.username));
     if (action === "upload-complete" && method === "POST") return send(await finishUpload(input.id, session.username));
     return fail("Admin action not found.", 404);

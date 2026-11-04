@@ -64,3 +64,12 @@ test('invalid quote amounts never become a displayed price or a request-only quo
     await assert.rejects(requestRingQuote({ ...options(), fetcher: async () => response({ total, currency: 'USD' }) }));
   }
 });
+
+test('customer breakdowns must contain valid amounts and match the displayed total', async () => {
+  const breakdown=[{label:'Center diamond',amount:2000},{label:'Head setting',amount:200},{label:'Band',amount:600}];
+  const quote=await requestRingQuote({...options(),fetcher:async()=>response({total:2800,currency:'USD',breakdown})});
+  assert.deepEqual(quote.breakdown,breakdown);
+  for (const invalid of [[{label:'Band',amount:-1}],[{label:'Band',amount:100}],[{label:42,amount:2800}]]) {
+    await assert.rejects(requestRingQuote({...options(),fetcher:async()=>response({total:2800,currency:'USD',breakdown:invalid})}));
+  }
+});

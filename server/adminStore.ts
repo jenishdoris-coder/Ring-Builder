@@ -3,6 +3,8 @@ import type { RingCatalog } from "../src/types/catalog.js";
 import { catalogCounts, storefrontCatalog, validateCatalog } from "../src/admin/catalog.js";
 import { database, mongoClient } from "./db.js";
 import { componentPricingOnly, getHeadStyles, headStyleId } from "../src/utils/ringPricing.js";
+import {catalogAssetUrls,catalogModels,pruneCatalogThumbnails} from '../src/utils/catalogAssets.js';
+import {deletionId,pendingAssetCleanup,processAssetCleanup,removedCatalogAssets} from './adminAssets.js';
 
 export class AdminError extends Error { constructor(public status: number, message: string) { super(message); } }
 export const fail = (message: string, status = 400): never => { throw new AdminError(status, message); };
@@ -12,10 +14,11 @@ export const activeCatalog = async () => {
   const { _id, stats, createdAt, updatedAt, ...data } = catalog;
   return { catalog: data as RingCatalog, updatedAt: updatedAt || createdAt || null, stats };
 };
-const cleanCatalog = (catalog: RingCatalog, active: RingCatalog): RingCatalog => ({
+const cleanCatalog = (catalog: RingCatalog, active: RingCatalog): RingCatalog => pruneCatalogThumbnails({
   schemaVersion: 1, releaseId: active.releaseId, assetBaseUrl: active.assetBaseUrl,
   headStyles: getHeadStyles(catalog).map(style => ({ id: style.id, name: style.name.trim(), enabled: style.enabled !== false })),
   ...(catalog.pricing ? { pricing: structuredClone(componentPricingOnly(catalog.pricing)) } : {}),
+  ...(catalog.appearance ? { appearance: structuredClone(catalog.appearance) } : {}),
   shanks: catalog.shanks.map(item => ({ id: item.id, name: item.name.trim(), rawName: item.name.trim(), category: item.category.trim(), file: item.file, ...(item.thumbnail ? { thumbnail: item.thumbnail } : {}), enabled: item.enabled !== false })),
   shapes: catalog.shapes.map(item => ({ id: item.id, name: item.name.trim(), folder: typeof item.folder === "string" ? item.folder.slice(0, 120) : item.name, ...(item.image ? { image: item.image } : {}), enabled: item.enabled !== false,
     carats: item.carats.map(head => ({ carat: head.carat, styleId: headStyleId(head), label: head.label.trim(), file: head.file, filename: head.filename, ...(head.thumbnail ? { thumbnail: head.thumbnail } : {}), enabled: head.enabled !== false })).sort((a, b) => a.carat - b.carat) })),
@@ -35,51 +38,54 @@ export const event = async (type: string, message: string, username: string) => 
 };
 export const adminState = async () => {
   const db = await database();
-  const [active, draft, activity, storage] = await Promise.all([
-    activeCatalog(), db.collection<any>("ring_builder_admin_drafts").findOne({ _id: "store" }),
+  const [active, saved, legacy, activity, storage, pendingCleanup] = await Promise.all([
+    activeCatalog(), db.collection<any>("ring_builder_admin_catalogs").findOne({ _id: "store" }),
+    // Retain existing admin edits and hidden models when upgrading from the old workflow.
+    db.collection<any>("ring_builder_admin_drafts").findOne({ _id: "store" }),
     db.collection<any>("ring_builder_admin_events").find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).limit(12).toArray(),
     db.collection("ring_builder_assets").aggregate([{ $group: { _id: null, count: { $sum: 1 }, bytes: { $sum: "$bytes" } } }]).toArray(),
+    pendingAssetCleanup(),
   ]);
-  return { active: active.catalog, publishedAt: active.updatedAt, draft: draft?.catalog ?? active.catalog, revision: draft?.revision ?? 0, savedAt: draft?.updatedAt ?? null,
-    baseReleaseId: draft?.baseReleaseId ?? active.catalog.releaseId, hasDraft: Boolean(draft?.dirty), activity,
+  const stored = saved ?? legacy;
+  const current = stored?.baseReleaseId === active.catalog.releaseId ? stored : undefined;
+  return { active: active.catalog, catalog: current?.catalog ?? active.catalog, publishedAt: active.updatedAt,
+    revision: stored?.revision ?? 0, baseReleaseId: active.catalog.releaseId,
+    hasUnpublishedChanges: !saved && Boolean(current?.dirty), activity, cleanup:{pending:pendingCleanup},
     storage: { count: storage[0]?.count ?? 0, bytes: storage[0]?.bytes ?? 0 },
     connections: { database: true, uploads: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_ACCESS_KEY_ID && process.env.CLOUDFLARE_SECRET_ACCESS_KEY && process.env.CLOUDFLARE_BUCKET_NAME && process.env.CLOUDFLARE_R2_PUBLIC_URL) },
   };
 };
-export const saveDraft = async (input: unknown, revision: number, username: string) => {
-  if (!Number.isInteger(revision) || revision < 0) return fail("The draft revision is invalid.");
-  const active = (await activeCatalog()).catalog;
-  const catalog = checkedCatalog(input, active);
-  const drafts = (await database()).collection<any>("ring_builder_admin_drafts");
-  if (revision === 0) {
-    try { await drafts.insertOne({ _id: "store", revision: 1, baseReleaseId: active.releaseId, catalog, dirty: true, updatedAt: new Date(), updatedBy: username }); }
-    catch (error: any) { if (error.code === 11000) return fail("This draft was changed in another window. Reload before saving.", 409); throw error; }
-  } else {
-    const saved = await drafts.updateOne({ _id: "store", revision }, { $set: { catalog, dirty: true, updatedAt: new Date(), updatedBy: username }, $inc: { revision: 1 } });
-    if (!saved.matchedCount) return fail("This draft was changed in another window. Reload before saving.", 409);
-  }
-  await event("saved", "Catalog draft saved", username);
-  return adminState();
-};
-export const publishDraft = async (revision: number, username: string) => {
-  if (!Number.isInteger(revision) || revision < 1) return fail("Save a valid draft before publishing.", 400);
+
+/** One request validates and publishes the submitted edits atomically. */
+export const publishCatalog = async (input: unknown, revision: number, baseReleaseId: string, username: string) => {
+  if (!Number.isInteger(revision) || revision < 0 || typeof baseReleaseId !== "string" || !baseReleaseId || baseReleaseId.length > 200) return fail("Reload the admin before publishing.");
   const client = await mongoClient(), db = await database();
   const session = client.startSession();
   try {
     await session.withTransaction(async () => {
-      const drafts = db.collection<any>("ring_builder_admin_drafts"), catalogs = db.collection<any>("ring_builder_catalogs");
-      const draft = await drafts.findOne({ _id: "store", revision }, { session });
-      if (!draft?.dirty) return fail("Save a draft before publishing.", 409);
+      const settings = db.collection<any>("ring_builder_admin_catalogs"), catalogs = db.collection<any>("ring_builder_catalogs");
+      const saved = await settings.findOne({ _id: "store" }, { session });
+      const legacy = saved ? undefined : await db.collection<any>("ring_builder_admin_drafts").findOne({ _id: "store" }, { session });
       const active = await catalogs.findOne({ _id: "active" }, { session });
-      if (!active || draft.baseReleaseId !== active.releaseId) return fail("The live catalog changed after this draft started. Refresh and review it before publishing.", 409);
-      const catalog = checkedCatalog(draft.catalog, active);
+      if (!active || active.releaseId !== baseReleaseId || (saved?.revision ?? legacy?.revision ?? 0) !== revision) return fail("The catalog changed in another window. Reload before publishing.", 409);
+      const catalog = checkedCatalog(input, active);
+      const previous=saved??legacy,oldCatalog=previous?.baseReleaseId===active.releaseId?previous.catalog:active;
+      const modelFiles=new Set(catalogModels(catalog).map(model=>model.file));
+      const removedFiles=[...new Set(catalogModels(oldCatalog).map(model=>model.file))].filter(file=>!modelFiles.has(file));
+      const associated=removedFiles.length?await db.collection<any>('ring_builder_assets').find({modelFile:{$in:removedFiles}},{session,projection:{url:1}}).toArray():[];
+      const deletions=db.collection<any>('ring_builder_asset_deletions');
+      if(await deletions.findOne({_id:{$in:[...catalogAssetUrls(catalog)].map(deletionId)},status:{$in:['pending','deleting','deleted']}},{session}))return fail('This catalog contains a deleted file. Upload that model or image again before publishing.',409);
       const releaseId = `admin-${randomUUID()}`, now = new Date();
+      const removed=removedCatalogAssets(oldCatalog,catalog,associated);
+      if(removed.length)await deletions.bulkWrite(removed.map(asset=>({updateOne:{filter:{_id:deletionId(asset.url)},update:{$setOnInsert:{...asset,status:'pending',releaseId,createdAt:now,updatedAt:now}},upsert:true}})),{session});
       const visible = { ...storefrontCatalog(catalog), releaseId };
       await catalogs.insertOne({ _id: `release:${releaseId}`, ...visible, stats: catalogCounts(visible), createdAt: now, publishedBy: username }, { session });
       await catalogs.replaceOne({ _id: "active" }, { ...visible, stats: catalogCounts(visible), updatedAt: now, publishedBy: username }, { session });
-      await drafts.updateOne({ _id: "store", revision }, { $set: { catalog: { ...catalog, releaseId }, dirty: false, baseReleaseId: releaseId, updatedAt: now, updatedBy: username }, $inc: { revision: 1 } }, { session });
+      // Keep hidden catalog entries for the admin, while the storefront receives only available entries.
+      await settings.replaceOne({ _id: "store" }, { catalog: { ...catalog, releaseId }, revision: revision + 1, baseReleaseId: releaseId, updatedAt: now, updatedBy: username }, { upsert: true, session });
       await db.collection<any>("ring_builder_admin_events").insertOne({ _id: randomUUID(), type: "published", message: "Catalog published to the ring builder", username, createdAt: now }, { session });
     });
   } finally { await session.endSession(); }
-  return adminState();
+  const cleanup=await processAssetCleanup();
+  return {...await adminState(),removedAssets:cleanup.deleted};
 };

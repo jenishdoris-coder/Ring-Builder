@@ -1,4 +1,5 @@
 import type { PricingConfig, PublicPricing } from "./pricing";
+import type { BuilderAppearance } from "./appearance";
 export interface CaratOption { carat: number; label: string; file: string; filename: string; thumbnail?: string; enabled?: boolean; styleId?: string; }
 export interface HeadStyle { id: string; name: string; enabled?: boolean; }
 export interface DiamondShape { id: string; name: string; folder: string; carats: CaratOption[]; image?: string; enabled?: boolean; }
@@ -12,4 +13,5 @@ export interface RingCatalog {
   pricing?: PricingConfig;
   pricingPublic?: PublicPricing;
   previewSource?: "draft" | "published";
+  appearance?: BuilderAppearance;
 }

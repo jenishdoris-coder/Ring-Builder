@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { RingCatalog } from "../../types/catalog";
 import type { PriceSelection } from "../../types/pricing";
 import { money } from "../../utils/ringPricing";
@@ -12,7 +12,12 @@ export const RingPrice = ({ catalog, selection }: { catalog: RingCatalog; select
   const demo = import.meta.env.DEV && new URLSearchParams(location.search).get("demo") === "pricing";
   const body = JSON.stringify({ ...selection,size });
   const [refresh,setRefresh] = useState(0);
-  const key = catalog.releaseId + ":" + draft + ":" + demo + ":" + body;
+  const key = catalog.releaseId + ":" + (p?.revision || "") + ":" + draft + ":" + demo + ":" + body;
+  const [breakdownKey, setBreakdownKey] = useState<string>();
+  const breakdownOpen = breakdownKey === key;
+  const breakdownId = useId();
+  const pricingRef = useRef<HTMLDivElement>(null);
+  const infoRef = useRef<HTMLButtonElement>(null);
   const [result,setResult] = useState<{ key:string; status:"ready"; quote:PublicRingQuote } | { key:string; status:"error" }>();
   const [pending,setPending] = useState(false);
   useEffect(() => {
@@ -39,10 +44,34 @@ export const RingPrice = ({ catalog, selection }: { catalog: RingCatalog; select
     document.addEventListener("visibilitychange", recover);
     return () => { window.removeEventListener("online", recover); window.removeEventListener("pageshow", recover); document.removeEventListener("visibilitychange", recover); };
   }, [key, result]);
+  useEffect(() => {
+    if (!breakdownOpen) return;
+    const dismiss = (event: PointerEvent) => { if (event.target instanceof Node && !pricingRef.current?.contains(event.target)) setBreakdownKey(undefined); };
+    const keyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setBreakdownKey(undefined); infoRef.current?.focus({ preventScroll: true }); } };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", keyDown);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", keyDown); };
+  }, [breakdownOpen]);
   if (!p?.enabled) return null;
   const ready = result?.key === key;
   const quote = ready && result.status === "ready" ? result.quote : undefined;
   const failed = ready && result.status === "error" && !pending;
   if (quote?.enabled === false) return null;
-  return <div className="product-ring-pricing"><div className="product-ring-price" aria-live="polite" aria-busy={pending}><strong>{!ready || pending ? <span className="product-price-placeholder" aria-hidden="true" /> : failed ? "Price unavailable" : quote?.total === null ? "Price on request" : quote ? money(quote.total!,quote.currency) : null}</strong><span>{quote?.currency || p.currency} · Complete ring</span></div><label className="product-ring-size">Ring size <small>{p.sizeSystem}</small><select aria-label="Ring size" value={size} onChange={event => setChosenSize(event.target.value)}>{p.sizes.map(value => <option key={value}>{value}</option>)}</select></label></div>;
+  const hasBreakdown = !pending && quote?.total !== null && Boolean(quote?.breakdown?.length);
+  return <div ref={pricingRef} className="product-ring-pricing">
+    <div className="product-ring-price">
+      <div className="product-price-amount-row">
+        <strong aria-live="polite" aria-busy={pending}>{!ready || pending ? <span className="product-price-placeholder" aria-hidden="true" /> : failed ? "Price unavailable" : quote?.total === null ? "Price on request" : quote ? money(quote.total!,quote.currency) : null}</strong>
+        {hasBreakdown && <button ref={infoRef} type="button" className="product-price-info" aria-label="Price breakdown" title="Price breakdown" aria-expanded={breakdownOpen} aria-controls={breakdownId} onClick={() => setBreakdownKey(breakdownOpen ? undefined : key)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5m0-8h.01" /></svg></button>}
+      </div>
+      <span>{quote?.currency || p.currency} · Complete ring</span>
+    </div>
+    <label className="product-ring-size">Ring size <small>{p.sizeSystem}</small><select aria-label="Ring size" value={size} onChange={event => setChosenSize(event.target.value)}>{p.sizes.map(value => <option key={value}>{value}</option>)}</select></label>
+    {breakdownOpen && hasBreakdown && quote && <section id={breakdownId} className="product-price-breakdown" aria-labelledby={`${breakdownId}-title`}>
+      <div className="product-price-breakdown-heading"><h2 id={`${breakdownId}-title`}>Price breakdown</h2><button type="button" className="product-price-breakdown-close" aria-label="Close price breakdown" onClick={() => { setBreakdownKey(undefined); infoRef.current?.focus({ preventScroll: true }); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button></div>
+      <p>Your selected design · {p.sizeSystem} size {size}</p>
+      <dl>{quote.breakdown!.map(line => <div key={line.label}><dt>{line.label}</dt><dd>{money(line.amount, quote.currency)}</dd></div>)}</dl>
+      <div className="product-price-breakdown-total"><span>Complete ring</span><strong>{money(quote.total!, quote.currency)}</strong></div>
+    </section>}
+  </div>;
 };

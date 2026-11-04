@@ -1,23 +1,24 @@
 import type { RingCatalog } from "../types/catalog";
 import { storefrontCatalog } from "./catalog";
 import { getHeadStyles, headStyleId, LEGACY_HEAD_STYLE } from "../utils/ringPricing";
+import {pruneCatalogThumbnails} from '../utils/catalogAssets';
 
 export type CatalogDeleteTarget = {kind:"band"|"metal"|"shape"|"style";id:string} | {kind:"head";shapeId:string;styleId:string;carat:number};
 const headKey = (style:string,carat:number,shape?:string) => `${style}|${carat}${shape ? `|${shape}` : ""}`;
 
-/** Remove catalog references only. Public files and prior live releases stay intact. */
+/** Prepare an undoable catalog removal. Unused Cloudflare files are deleted after Publish. */
 export const deleteCatalogItem = (source: RingCatalog,target:CatalogDeleteTarget) => {
   const catalog = structuredClone(source);
   let label = "", removedModels = 0;
   if (target.kind === "band") {
     const item = catalog.shanks.find(item => item.id === target.id);
-    if (!item) throw new Error("This band is no longer in the draft.");
+    if (!item) throw new Error("This band is no longer in the catalog.");
     label = item.name; removedModels = 1;
     catalog.shanks = catalog.shanks.filter(item => item.id !== target.id);
     if (catalog.pricing) for (const key of Object.keys(catalog.pricing.bands)) if (key.split("|")[0] === target.id) delete catalog.pricing.bands[key];
   } else if (target.kind === "metal") {
     const item = catalog.metals.find(item => item.id === target.id);
-    if (!item) throw new Error("This metal is no longer in the draft.");
+    if (!item) throw new Error("This metal is no longer in the catalog.");
     label = item.name; catalog.metals = catalog.metals.filter(item => item.id !== target.id);
     if (catalog.pricing) {
       delete catalog.pricing.metalRates[target.id];
@@ -25,18 +26,18 @@ export const deleteCatalogItem = (source: RingCatalog,target:CatalogDeleteTarget
     }
   } else if (target.kind === "shape") {
     const item = catalog.shapes.find(item => item.id === target.id);
-    if (!item) throw new Error("This shape is no longer in the draft.");
+    if (!item) throw new Error("This shape is no longer in the catalog.");
     label = item.name; removedModels = item.carats.length;
     catalog.shapes = catalog.shapes.filter(item => item.id !== target.id);
   } else if (target.kind === "style") {
     const styles = getHeadStyles(catalog), style = styles.find(item => item.id === target.id);
-    if (!style) throw new Error("This setting is no longer in the draft.");
+    if (!style) throw new Error("This setting is no longer in the catalog.");
     label = style.name; catalog.headStyles = styles.filter(item => item.id !== target.id);
     catalog.shapes.forEach(shape => { removedModels += shape.carats.filter(head => headStyleId(head) === target.id).length; shape.carats = shape.carats.filter(head => headStyleId(head) !== target.id); });
   } else if (target.kind === "head") {
     const shape = catalog.shapes.find(shape => shape.id === target.shapeId);
     const item = shape?.carats.find(head => head.carat === target.carat && headStyleId(head) === target.styleId);
-    if (!shape || !item) throw new Error("This head is no longer in the draft.");
+    if (!shape || !item) throw new Error("This head is no longer in the catalog.");
     label = `${shape.name} ${item.carat} ct · ${getHeadStyles(catalog).find(style => style.id === target.styleId)?.name || "head"}`;
     removedModels = 1; shape.carats = shape.carats.filter(head => !(head.carat === target.carat && headStyleId(head) === target.styleId));
   }
@@ -70,5 +71,5 @@ export const deleteCatalogItem = (source: RingCatalog,target:CatalogDeleteTarget
     catalog.defaults.shapeId = shape.id; catalog.defaults.carat = head.carat; catalog.defaults.headStyleId = headStyleId(head);
     changes.push(`Default head changes to ${shape.name} ${head.carat} ct.`);
   }
-  return { catalog,label,removedModels,changes };
+  return { catalog:pruneCatalogThumbnails(catalog),label,removedModels,changes };
 };

@@ -1,0 +1,18 @@
+.studio-startup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(365px, 420px); gap: 42px; max-width: 1660px; min-height: 100dvh; padding: 25px 38px 72px; margin: auto; background: #fff; }
+.studio-startup-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; height: calc(100dvh - 48px); min-height: 420px; max-height: 900px; }
+.studio-startup-tile { display: grid; place-items: center; min-width: 0; min-height: 0; border: 1px solid #eceef1; background: #fff; }
+.studio-startup-tile svg { width: 48px; height: 54px; fill: none; stroke: #c7cbd2; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; animation: studio-startup-breathe 1.8s ease-in-out infinite; }
+.studio-startup-tile span { width: 26px; height: 26px; border: 1px solid #f1f2f4; border-radius: 50%; }
+.studio-startup-panel { padding-top: 6px; }
+.studio-startup-line { height: 10px; margin-bottom: 16px; border-radius: 4px; background: #f1f2f4; }
+.studio-startup-line.is-title { height: 22px; }
+.studio-startup-line.is-short { width: 40%; }
+.studio-startup-line.is-medium { width: 70%; }
+.studio-startup-line.is-price { width: 105px; height: 24px; margin-top: 28px; }
+.studio-startup-panel hr { height: 1px; border: 0; background: #eceef1; margin: 30px 0; }
+.studio-startup-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 22px; }
+.studio-startup-options > div { aspect-ratio: 1; border: 1px solid #eceef1; background: #fafbfc; }
+.viewer-engine-placeholder { position: absolute; inset: 0; }
+@keyframes studio-startup-breathe { 50% { opacity: .4; } }
+@media (max-width: 850px) { .studio-startup { grid-template-columns: 1fr; gap: 24px; padding: 12px 14px; }.studio-startup-gallery { grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto; height: auto; min-height: 0; gap: 8px; }.studio-startup-tile { aspect-ratio: 1; border-radius: 13px; }.studio-startup-tile:first-child { grid-column: 1 / -1; border-radius: 20px; }.studio-startup-panel { padding: 22px 20px; border: 1px solid #eceef1; border-radius: 18px; } }
+@media (prefers-reduced-motion: reduce) { .studio-startup-tile svg { animation: none; } }

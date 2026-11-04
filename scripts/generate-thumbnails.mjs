@@ -7,7 +7,7 @@ import { createServer } from "vite";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const publicRoot = resolve(root, "public");
 const catalog = JSON.parse(await readFile(resolve(root, "src/config/catalog.json"), "utf8"));
-const rendererSource = await readFile(resolve(root, "scripts/thumbnail-renderer.mjs"));
+const rendererSource = Buffer.concat(await Promise.all(["scripts/thumbnail-renderer.mjs", "src/utils/thumbnailRendering.ts", "src/config/thumbnailPresets.json"].map(file=>readFile(resolve(root,file)))));
 const meshSource = await readFile(resolve(root, "src/utils/meshUtils.ts"));
 const definitions = [...catalog.shapes.flatMap(shape => shape.carats.map(carat => ({ file: carat.file, kind: "head" }))), ...catalog.shanks.map(shank => ({ file: shank.file, kind: "shank" }))];
 const tasks = [];
@@ -25,8 +25,8 @@ for (const item of definitions) {
 }
 async function finish() {
   for (const image of Object.values(images)) if (!(await stat(resolve(publicRoot, `.${image}`))).size) throw new Error("A generated thumbnail is missing.");
-  await writeFile(resolve(root, "src/config/modelThumbnails.json"), JSON.stringify({ width: 360, height: 280, images }, null, 2) + "\n");
-  console.log(JSON.stringify({ stage: "complete", generated: tasks.length, reused, total: definitions.length, width: 360, height: 280 }));
+  await writeFile(resolve(root, "src/config/modelThumbnails.json"), JSON.stringify({ width: 480, height: 360, images }, null, 2) + "\n");
+  console.log(JSON.stringify({ stage: "complete", generated: tasks.length, reused, total: definitions.length, width: 480, height: 360 }));
 }
 if (!tasks.length) { await finish(); process.exit(0); }
 
@@ -34,7 +34,7 @@ const token = randomBytes(24).toString("hex");
 const origin = "http://127.0.0.1:5174";
 let completed = 0;
 const saved = new Set();
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Generate ring thumbnails</title><style>body{font:16px system-ui;max-width:900px;margin:40px auto;color:#20252b}button{padding:12px 24px}#previews{display:flex;flex-wrap:wrap}img{width:120px;height:94px;object-fit:contain}</style></head><body><h1>Generate static ring thumbnails</h1><p>Creates 360 × 280 WebP images locally. Existing matching images are reused.</p><button id="generate">Generate thumbnails</button><p id="status">Ready: ${tasks.length} images to generate; ${reused} already saved.</p><div id="previews"></div><script type="module">
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Generate ring thumbnails</title><style>body{font:16px system-ui;max-width:900px;margin:40px auto;color:#20252b}button{padding:12px 24px}#previews{display:flex;flex-wrap:wrap}img{width:120px;height:94px;object-fit:contain}</style></head><body><h1>Generate static ring thumbnails</h1><p>Creates 480 × 360 WebP images locally. Existing matching images are reused.</p><button id="generate">Generate thumbnails</button><p id="status">Ready: ${tasks.length} images to generate; ${reused} already saved.</p><div id="previews"></div><script type="module">
 import { renderThumbnail } from '/scripts/thumbnail-renderer.mjs';
 const button=document.querySelector('#generate'), status=document.querySelector('#status');
 button.addEventListener('click',async()=>{

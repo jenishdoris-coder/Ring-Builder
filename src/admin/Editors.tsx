@@ -5,8 +5,10 @@ import { slug } from "./catalog";
 import { Icon } from "./Icons";
 import { ModelThumbnail } from "../components/UI/ModelThumbnail";
 import { uploadAsset, type AdminSession } from "./api";
+import {useAppearance} from '../components/UI/AppearanceContext';
+import {getAppearance,modelThumbnailKey,thumbnailSignature} from '../config/appearance';
 
-export const Sheet = ({ title, subtitle, children, onClose, onSubmit, busy = false, onDelete, confirmLabel = "Apply to draft", danger = false, confirmDisabled = false, className = "" }: { title: string; subtitle: string; children: ReactNode; onClose: () => void; onSubmit: (event: FormEvent) => void; busy?: boolean; onDelete?: () => void; confirmLabel?: string; danger?: boolean; confirmDisabled?: boolean; className?: string }) => {
+export const Sheet = ({ title, subtitle, children, onClose, onSubmit, busy = false, onDelete, confirmLabel = "Apply changes", danger = false, confirmDisabled = false, className = "" }: { title: string; subtitle: string; children: ReactNode; onClose: () => void; onSubmit: (event: FormEvent) => void; busy?: boolean; onDelete?: () => void; confirmLabel?: string; danger?: boolean; confirmDisabled?: boolean; className?: string }) => {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -24,13 +26,14 @@ export const Sheet = ({ title, subtitle, children, onClose, onSubmit, busy = fal
     if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }}>
     <header><div><p className="admin-kicker">CATALOG EDITOR</p><h2 id={titleId}>{title}</h2><p>{subtitle}</p></div><button className="admin-icon-button" type="button" aria-label="Close editor" disabled={busy} onClick={onClose}><Icon name="close" /></button></header>
-    <form onSubmit={onSubmit}><div className="admin-sheet-content">{children}</div><footer>{onDelete ? <button type="button" className="admin-button danger-quiet" disabled={busy} onClick={onDelete}><Icon name="trash" size={15} />Delete</button> : <span>Changes go to your draft first.</span>}<button type="button" className="admin-button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className={`admin-button ${danger ? "danger" : "primary"}`} disabled={busy || confirmDisabled}>{busy ? "Processing…" : confirmLabel}</button></footer></form>
+    <form onSubmit={onSubmit}><div className="admin-sheet-content">{children}</div><footer>{onDelete ? <button type="button" className="admin-button danger-quiet" disabled={busy} onClick={onDelete}><Icon name="trash" size={15} />Delete</button> : <span>Click Publish after applying changes.</span>}<button type="button" className="admin-button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className={`admin-button ${danger ? "danger" : "primary"}`} disabled={busy || confirmDisabled}>{busy ? "Processing…" : confirmLabel}</button></footer></form>
   </div></div>;
 };
 export const Field = ({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) => <label className="admin-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
 export const Visibility = ({ enabled, onChange, title = "Available in the builder", detail = "Hide without removing the model or its files." }: { enabled: boolean; onChange: (enabled: boolean) => void; title?: string; detail?: string }) => <label className="admin-visibility"><span><strong>{title}</strong><small>{detail}</small></span><input type="checkbox" role="switch" checked={enabled} onChange={event => onChange(event.target.checked)} /><span className="admin-switch" /></label>;
 
 export const AssetUpload = ({ value, session, kind, modelKind = "shank", onChange, onBusy }: { value: string; session: AdminSession; kind: "model" | "image"; modelKind?: "head" | "shank"; onChange: (value: { url: string; filename: string; thumbnail?: string }) => void; onBusy: (busy: boolean) => void }) => {
+  const appearance=useAppearance();
   const [status, setStatus] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const choose = async (file?: File) => {
@@ -45,9 +48,9 @@ export const AssetUpload = ({ value, session, kind, modelKind = "shank", onChang
         try {
           setStatus("Creating thumbnail…");
           const { generateThumbnail } = await import("./thumbnail");
-          const image = await generateThumbnail(file, modelKind);
+          const image = await generateThumbnail(file, modelKind,appearance.thumbnails);
           setStatus("Saving thumbnail…");
-          thumbnail = (await uploadAsset(image, "image", session, () => {})).url;
+          thumbnail = (await uploadAsset(image, "image", session, () => {},undefined,asset.url)).url;
         } catch { setError("The model was uploaded. Add a thumbnail below if the automatic preview could not be generated."); }
       }
       onChange({ ...asset, thumbnail }); setStatus("Uploaded to your library");
@@ -103,6 +106,10 @@ export const CatalogEditor = ({ target, catalog, session, onClose, onApply, onDe
       if (next.metals.some(item => item.id === value.id && item.id !== target.item?.id)) return setError("A metal already uses this name.");
       const metal = { ...value, gradient: `linear-gradient(135deg, ${value.hexCode}, #fff, ${value.hexCode})` };
       next.metals = target.item ? next.metals.map(item => item.id === target.item!.id ? metal : item) : [...next.metals, metal];
+    }
+    if((target.kind==='head'||target.kind==='band')&&value.file&&value.thumbnail){
+      const appearance=getAppearance(next.appearance),signature=thumbnailSignature(appearance.thumbnails);
+      next.appearance={...appearance,thumbnailSet:{signature,images:{...(appearance.thumbnailSet?.signature===signature?appearance.thumbnailSet.images:{}),[modelThumbnailKey(value.file,target.kind==='head'?'head':'shank')]:value.thumbnail}}};
     }
     onApply(next);
   };

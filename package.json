@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "vite",
     "dev:host": "vite --host",
+    "dev:admin-preview": "vite --config vite.admin-preview.config.ts --host",
     "dev:secure": "node scripts/dev-secure.mjs",
     "screenshots:inbox": "node scripts/screenshot-inbox.mjs",
     "admin:setup": "node scripts/setup-admin.mjs",
     "admin:cors": "node scripts/admin-upload-cors.mjs",
-    "test:admin": "node scripts/testAdmin.mjs",
+    "test:admin": "node scripts/testAdmin.mjs && node scripts/testAdminFlow.mjs",
     "build": "node scripts/build.mjs",
     "test:animation": "node scripts/testRingDissolve.mjs && node scripts/testRingAssembly.mjs",
     "test:motion": "node scripts/testViewerMotion.mjs",

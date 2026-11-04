@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { database } from "./db.js";
@@ -10,20 +10,30 @@ const client = () => {
   return new S3Client({ region: "auto", endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`, credentials: { accessKeyId: process.env.CLOUDFLARE_ACCESS_KEY_ID!, secretAccessKey: process.env.CLOUDFLARE_SECRET_ACCESS_KEY! }, requestChecksumCalculation: "WHEN_REQUIRED", responseChecksumValidation: "WHEN_REQUIRED" });
 };
 export const beginUpload = async (input: any, username: string) => {
-  const { filename, bytes, kind } = input;
+  const { filename, bytes, kind, idempotencyKey, modelFile } = input;
   const image = kind === "image";
   if (kind !== "model" && !image) return fail("Choose a model or image upload.");
   if (typeof filename !== "string" || filename.length > 240 || !Number.isInteger(bytes) || bytes <= 0 || bytes > (image ? 10 : 100) * 1024 * 1024) return fail(`Choose a ${image ? "PNG, JPG or WebP below 10 MB" : "GLB below 100 MB"}.`);
   const extension = filename.split(".").pop()?.toLowerCase();
   const contentType = image ? ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" } as Record<string, string>)[extension!] : extension === "glb" ? "model/gltf-binary" : undefined;
   if (!contentType) return fail("The file format is not supported.");
-  const id = randomUUID(), name = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+  if (idempotencyKey !== undefined && (typeof idempotencyKey !== 'string' || idempotencyKey.length > 8192 || !image)) return fail('The upload resume key is invalid.');
+  const publicBase=process.env.CLOUDFLARE_R2_PUBLIC_URL?.replace(/\/+$/,'');
+  if(modelFile!==undefined&&(typeof modelFile!=='string'||!modelFile.startsWith(`${publicBase}/ring-builder/`)||!modelFile.endsWith('.glb')||modelFile.length>2048||!image))return fail('The thumbnail model reference is invalid.');
+  if(modelFile&&await (await database()).collection('ring_builder_asset_deletions').findOne({url:modelFile,status:{$in:['pending','deleting','deleted']}}))return fail('This model was deleted. Upload it again before generating thumbnails.',409);
+  const digest = idempotencyKey ? createHash('sha256').update(`${username}\0${idempotencyKey}`).digest('hex') : '';
+  const id = digest ? `${digest.slice(0,8)}-${digest.slice(8,12)}-${digest.slice(12,16)}-${digest.slice(16,20)}-${digest.slice(20,32)}` : randomUUID();
+  const name = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
   const key = `ring-builder/admin/${id}/${name}`;
   const r2 = client();
   try {
+    const uploads = (await database()).collection<any>('ring_builder_admin_uploads');
+    const previous = idempotencyKey ? await uploads.findOne({ _id: id, username }) : undefined;
+    if (previous && (previous.bytes !== bytes || previous.filename !== filename || previous.kind !== kind)) return fail('The saved upload differs from this image. Generate it again with a new resume key.', 409);
+    if (previous?.completedAt) return { id, contentType, asset: { url: previous.url, filename: previous.filename } };
     const uploadUrl = await getSignedUrl(r2, new PutObjectCommand({ Bucket: process.env.CLOUDFLARE_BUCKET_NAME, Key: key, ContentType: contentType, ContentLength: bytes, CacheControl: "public, max-age=31536000, immutable" }), { expiresIn: 600 });
     const url = `${process.env.CLOUDFLARE_R2_PUBLIC_URL!.replace(/\/+$/, "")}/${key}`;
-    await (await database()).collection<any>("ring_builder_admin_uploads").insertOne({ _id: id, key, url, bytes, filename, contentType, kind, username, createdAt: new Date(), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
+    await uploads.updateOne({ _id: id }, { $setOnInsert: { key, url, bytes, filename, contentType, kind, username, createdAt: new Date(),...(modelFile?{modelFile}:{}) }, $set: { expiresAt: new Date(Date.now() + 60 * 60 * 1000) } }, { upsert: true });
     return { id, uploadUrl, contentType };
   } finally { r2.destroy(); }
 };
@@ -44,7 +54,7 @@ export const finishUpload = async (id: unknown, username: string) => {
       const valid = ticket.contentType === "image/png" ? bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) : ticket.contentType === "image/jpeg" ? bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 : bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
       if (!valid) return fail("The image contents do not match its file extension.");
     }
-    const record = { _id: `admin:${id}`, releaseId: "admin", sourcePath: ticket.filename, key: ticket.key, url: ticket.url, bytes: ticket.bytes, contentType: ticket.contentType, createdAt: new Date(), uploadedBy: username };
+    const record = { _id: `admin:${id}`, releaseId: "admin", sourcePath: ticket.filename, key: ticket.key, url: ticket.url, bytes: ticket.bytes, contentType: ticket.contentType, createdAt: new Date(), uploadedBy: username,...(ticket.modelFile?{modelFile:ticket.modelFile}:{}) };
     await db.collection<any>("ring_builder_assets").updateOne({ _id: record._id }, { $setOnInsert: record }, { upsert: true });
     if (!ticket.completedAt) await event("uploaded", `Uploaded ${ticket.filename}`, username);
     await db.collection<any>("ring_builder_admin_uploads").updateOne({ _id: id }, { $set: { completedAt: new Date() } });

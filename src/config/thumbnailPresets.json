@@ -1,0 +1,194 @@
+[
+  {
+    "id": "A",
+    "name": "Clean silver",
+    "caption": "White · bright studio",
+    "background": "#ffffff",
+    "metal": "#d0d5dc",
+    "wall": "#8d939d",
+    "roughness": 0.16,
+    "exposure": 0.95,
+    "box": 3,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/297cd77c44a65957-A-triple-row.webp"
+  },
+  {
+    "id": "B",
+    "name": "Defined platinum",
+    "caption": "White · crisp, balanced edges",
+    "background": "#ffffff",
+    "metal": "#d9dce0",
+    "wall": "#78828c",
+    "roughness": 0.23,
+    "exposure": 1.03,
+    "box": 3.3,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/726298ab3e4ec929-B-triple-row.webp"
+  },
+  {
+    "id": "C",
+    "name": "Champagne gold",
+    "caption": "Ivory · polished gold",
+    "background": "#f8f6f1",
+    "metal": "#e5b66b",
+    "wall": "#77736d",
+    "roughness": 0.2,
+    "exposure": 1.02,
+    "box": 3,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/905f46855a03918c-C-triple-row.webp"
+  },
+  {
+    "id": "D",
+    "name": "Satin silver",
+    "caption": "Soft gray · gentler highlights",
+    "background": "#f3f4f6",
+    "metal": "#bbc1c9",
+    "wall": "#78828f",
+    "roughness": 0.4,
+    "exposure": 1,
+    "box": 3,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/375b5687e1ba2cdb-D-triple-row.webp"
+  },
+  {
+    "id": "E",
+    "name": "Rose gold",
+    "caption": "Warm white · polished rose",
+    "background": "#fcf8f5",
+    "metal": "#dfa68f",
+    "wall": "#6f6870",
+    "roughness": 0.2,
+    "exposure": 1,
+    "box": 3,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/c4ac1dcdf281f8dd-E-triple-row.webp"
+  },
+  {
+    "id": "F",
+    "name": "Bright platinum",
+    "caption": "White · soft, bright reflections",
+    "background": "#ffffff",
+    "metal": "#ebedf0",
+    "wall": "#a2a8ae",
+    "roughness": 0.22,
+    "exposure": 1.12,
+    "box": 3.2,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/253c540246b43bee-F-triple-row.webp"
+  },
+  {
+    "id": "G",
+    "name": "Straight-on",
+    "caption": "White · symmetric front view",
+    "background": "#ffffff",
+    "metal": "#d6dbe0",
+    "wall": "#939ba4",
+    "roughness": 0.23,
+    "exposure": 1.02,
+    "box": 3,
+    "direction": [
+      0.04,
+      0.12,
+      1
+    ],
+    "headDirection": [
+      0.08,
+      0.55,
+      1
+    ],
+    "orthographic": true,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/930a6beb49aab980-G-triple-row.webp"
+  },
+  {
+    "id": "H",
+    "name": "Angled detail",
+    "caption": "Pearl · stronger three-quarter view",
+    "background": "#f7f8fa",
+    "metal": "#d9dee3",
+    "wall": "#8e97a2",
+    "roughness": 0.22,
+    "exposure": 1.03,
+    "box": 3,
+    "direction": [
+      1,
+      0.3,
+      1
+    ],
+    "zoom": 1.5,
+    "lift": 0.2,
+    "headDirection": [
+      1,
+      0.7,
+      1
+    ],
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/3eddc18d4bae3f9e-H-triple-row.webp"
+  },
+  {
+    "id": "I",
+    "name": "Complete model",
+    "caption": "White · the entire band visible",
+    "background": "#ffffff",
+    "metal": "#d9dee3",
+    "wall": "#939ba4",
+    "roughness": 0.21,
+    "exposure": 1.02,
+    "box": 3,
+    "direction": [
+      0.55,
+      0.35,
+      1
+    ],
+    "zoom": 0.98,
+    "lift": 0,
+    "headZoom": 0.94,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/a11dc9007547900b-I-triple-row.webp"
+  },
+  {
+    "id": "J",
+    "name": "Closer shoulders",
+    "caption": "White · focus on the setting seat",
+    "background": "#ffffff",
+    "metal": "#d9dee3",
+    "wall": "#8e97a2",
+    "roughness": 0.24,
+    "exposure": 1.04,
+    "box": 3,
+    "direction": [
+      0.45,
+      0.18,
+      1
+    ],
+    "zoom": 1.95,
+    "lift": 0.29,
+    "headZoom": 1.16,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/e11279b22978cbb3-J-triple-row.webp"
+  },
+  {
+    "id": "K",
+    "name": "Warm silver",
+    "caption": "Cream · softly warmed highlights",
+    "background": "#faf8f3",
+    "metal": "#dad8d0",
+    "wall": "#99948b",
+    "roughness": 0.27,
+    "exposure": 1.05,
+    "box": 3,
+    "light": "#fff4e4",
+    "envRotation": 0.5,
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/b0998c7f358f9d42-K-triple-row.webp"
+  },
+  {
+    "id": "L",
+    "name": "Sculpted matte",
+    "caption": "White · clear shape, minimal glare",
+    "background": "#ffffff",
+    "metal": "#a9afb8",
+    "wall": "#929ba6",
+    "roughness": 0.62,
+    "metalness": 0.2,
+    "clearcoat": 0,
+    "exposure": 1.1,
+    "box": 3,
+    "direction": [
+      0.4,
+      0.22,
+      1
+    ],
+    "preview": "https://pub-00106ed3cef7494fa78a2ebcaedec282.r2.dev/ring-builder/library/thumbnail-presets/cb2320027ca6677c-L-triple-row.webp"
+  }
+]

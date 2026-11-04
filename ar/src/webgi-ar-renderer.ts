@@ -7,7 +7,8 @@ import { isDiamondMesh } from "./ring-meshes";
 import { inspectCanvasTransparency, inspectTransparency, readCanvasPixels } from "./render-validation";
 import { arRenderScale } from "./render-quality";
 import { MultiRingEngraving } from "../../src/utils/ringEngraving";
-import type { RingEngravingConfig } from "../../src/config/engraving";
+import {ensureEngravingFont,type RingEngravingConfig} from "../../src/config/engraving";
+import '../../src/styles/engravingFonts.css';
 
 type Frame = {ring:THREE.Group|null; camera:THREE.OrthographicCamera; masks:THREE.Object3D[]; width:number; height:number};
 export interface WebGIAR {
@@ -24,7 +25,7 @@ export interface WebGIAR {
 
 /** Use the builder's actual WebGI plugin and assets, rather than approximating
  * its diamond shader. The SDK performs the final camera-overlay alpha clipping. */
-export async function createWebGIAR(canvas:HTMLCanvasElement, source:THREE.Object3D, signal:AbortSignal, inscriptions:RingEngravingConfig[]=[]):Promise<WebGIAR> {
+export async function createWebGIAR(canvas:HTMLCanvasElement, source:THREE.Object3D, signal:AbortSignal, inscriptions:RingEngravingConfig[]=[], lighting?:{url:string;rotation:number;intensity:number}):Promise<WebGIAR> {
   canvas.style.opacity="0";
   const floatComparison=import.meta.env.DEV&&new URLSearchParams(location.search).get("pipeline")==="float";
   const viewer:any = new W.CoreViewerApp({canvas,useRgbm:!floatComparison,useGBufferDepth:true,isAntialiased:true});
@@ -56,9 +57,9 @@ export async function createWebGIAR(canvas:HTMLCanvasElement, source:THREE.Objec
     await viewer.getOrAddPlugin(W.EXRLoadPlugin);
     const diamond:any = await viewer.getOrAddPlugin(W.DiamondPlugin);
     syncDiamondPluginFromConfig(diamond);
-    const [metalEnv,diamondEnv]=await Promise.all([manager.importer.importSinglePath(CUSTOM_METAL_ENV_URL),manager.importer.importSinglePath(CUSTOM_DIAMOND_ENV_URL)]);guard();
+    const [metalEnv,diamondEnv]=await Promise.all([manager.importer.importSinglePath(lighting?.url||CUSTOM_METAL_ENV_URL),manager.importer.importSinglePath(CUSTOM_DIAMOND_ENV_URL)]);guard();
     environments.add(metalEnv);environments.add(diamondEnv);
-    viewer.scene.setEnvironment(metalEnv);if(viewer.scene.environment)(viewer.scene.environment as any).rotation=METAL_ENV_ROTATION;
+    viewer.scene.setEnvironment(metalEnv);if(viewer.scene.environment)(viewer.scene.environment as any).rotation=lighting?.rotation??METAL_ENV_ROTATION;
     viewer.scene.fixedEnvMapDirection=true;
     diamond.forceSceneEnvMap=false;diamond.config.forceSceneEnvMap=false;
     diamond.envMap=diamondEnv;diamond.envMap2=diamondEnv;diamond.envMap3=diamondEnv;diamond.refreshEnvMaps?.();
@@ -95,13 +96,14 @@ export async function createWebGIAR(canvas:HTMLCanvasElement, source:THREE.Objec
       const material:any=new W.MeshStandardMaterial2({name:gem?"Gem 03":"Metal 01",color:gem?new W.Color("#ffffff"):hexSrgbToMetalColor(W.Color,hex),metalness:gem?0:1,roughness:gem?0:getMetalRoughness(hex),envMapIntensity:1,side:W.DoubleSide,clearcoat:0});
       if(!gem&&isWhiteGoldSrgb(hex)){material.emissive.copy(material.color);material.emissiveIntensity=.005;}
       materials.add(material);
+      if(!gem&&lighting)material.envMapIntensity=lighting.intensity;
       const copy=new W.Mesh(geometryFor(mesh.geometry),material);copy.name=mesh.name;copy.renderOrder=gem?DIAMOND_GEM.renderOrder:1;
       const relative=(mesh.userData.arPart==="band"&&bandInverse?bandInverse:inverse).clone().multiply(mesh.matrixWorld);copy.matrix.fromArray(relative.elements);copy.matrix.decompose(copy.position,copy.quaternion,copy.scale);
       copy.userData={...mesh.userData};(mesh.userData.arPart==="band"?bandGroup:ring).add(copy);if(gem)gems.push(copy);
     });
     await manager.addImported(ring,{autoScale:false,autoCenter:false,addToRoot:true,loadAnimations:false});guard();
     viewer.scene.modelRoot.add(ring);
-    if(inscriptions.length){ring.updateMatrixWorld(true);engraving.apply(bandGroup,inscriptions);}
+    if(inscriptions.length){await Promise.all(inscriptions.map(item=>ensureEngravingFont(item.font)));guard();ring.updateMatrixWorld(true);engraving.apply(bandGroup,inscriptions);}
     viewer.scene.setDirty({sceneUpdate:true});
     for(let start=0;start<gems.length;start+=4){
       await Promise.all(gems.slice(start,start+4).map(async(mesh,index)=>{

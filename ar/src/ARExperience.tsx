@@ -294,19 +294,21 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
 
       ringModelPromiseRef.current = Promise.allSettled([
         gltfPromise,
-        loadRingEnvironments(),
+        useWebGIAR ? Promise.resolve(null) : loadRingEnvironments(),
+        useWebGIAR ? import('./webgi-ar-renderer') : Promise.resolve(null),
       ])
-        .then(async ([gltfResult, environmentResult]) => {
+        .then(async ([gltfResult, environmentResult, bridgeResult]) => {
           if (
             generation !== resourceGenerationRef.current ||
             gltfResult.status === 'rejected' ||
-            environmentResult.status === 'rejected'
+            environmentResult.status === 'rejected' || bridgeResult.status === 'rejected'
           ) {
             if (gltfResult.status === 'fulfilled') {
               disposeModelResources(gltfResult.value.scene);
             }
             if (gltfResult.status === 'rejected') throw gltfResult.reason;
             if (environmentResult.status === 'rejected') throw environmentResult.reason;
+            if (bridgeResult.status === 'rejected') throw bridgeResult.reason;
             throw new DOMException('Ring load was cancelled.', 'AbortError');
           }
           const gltf = gltfResult.value;
@@ -410,7 +412,7 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
           if (useWebGIAR) {
             const canvas=webgiCanvasRef.current;if(!canvas)throw new Error('WebGI AR canvas is unavailable.');
             const abort=new AbortController();webgiLoadAbortRef.current=abort;
-            const {createWebGIAR}=await import('./webgi-ar-renderer');
+            const {createWebGIAR}=bridgeResult.value!;
             const bridge=await createWebGIAR(canvas,model,abort.signal,engravingRef.current);
             if(generation!==resourceGenerationRef.current){bridge.dispose();throw new DOMException('AR loading cancelled.','AbortError');}
             webgiRendererRef.current=bridge;
@@ -550,10 +552,11 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
         camera.lookAt(0, 0, 0);
         camera.updateMatrixWorld();
 
+        const initialMetalEnvironment = ringEnvironmentAssetsRef.current?.metal;
+        if (!useWebGIAR) {
         const environmentGenerator = new THREE.PMREMGenerator(renderer);
         // The HDR is normally ready from page preload. Use it immediately
         // instead of compiling a room map and then generating a second map.
-        const initialMetalEnvironment = ringEnvironmentAssetsRef.current?.metal;
         let environment: THREE.WebGLRenderTarget;
         if (initialMetalEnvironment) {
           environment = environmentGenerator.fromEquirectangular(initialMetalEnvironment);
@@ -565,6 +568,7 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
         scene.environment = environment.texture;
         environmentGenerator.dispose();
         ringEnvironmentRef.current = environment;
+        }
 
         scene.add(new THREE.HemisphereLight(0xffffff, 0x4d2d10, 2.5));
         const keyLight = new THREE.DirectionalLight(0xfff2d5, 4.5);
@@ -676,7 +680,7 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
         const initializedRenderer = renderer;
         const initializedScene = scene;
         const initializedCamera = camera;
-        void loadRingEnvironments()
+        if (!useWebGIAR) void loadRingEnvironments()
           .then(({ metal }) => {
             if (
               ringRendererRef.current !== initializedRenderer ||
@@ -1830,6 +1834,7 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
 
   useEffect(() => {
     const generation = resourceGenerationRef.current;
+    if(!replayMode)void getHandLandmarker().catch(()=>{});
     void loadRingModel().catch((error) => {
       if (generation !== resourceGenerationRef.current) return;
       console.error('Unable to preload the selected ring.', error);
@@ -1878,7 +1883,7 @@ export default function ARExperience({ selection, engraving = [], onClose }: ARE
       openCvRef.current = null;
       disposeRingModel();
     };
-  }, [disposeRingModel, loadRingModel, releaseStream, stopCamera]);
+  }, [disposeRingModel, getHandLandmarker,loadRingModel, releaseStream, stopCamera]);
 
 
   useEffect(() => {

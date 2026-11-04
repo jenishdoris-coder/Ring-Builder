@@ -1,16 +1,20 @@
-import { ENGRAVING_MAX_CHARACTERS, ENGRAVING_POSITIONS, engravingTextError, type EngravingPosition, type EngravingStatus, type RingEngravingConfig } from "../../config/engraving";
+import { ENGRAVING_MAX_CHARACTERS, ENGRAVING_POSITIONS, ENGRAVING_FONTS,engravingFont,engravingTextError, type EngravingFontId,type EngravingPosition, type EngravingStatus, type RingEngravingConfig } from "../../config/engraving";
+import '../../styles/engravingFonts.css';
 import bottomExample from "../../assets/engraving/bottom.webp";
 import rightExample from "../../assets/engraving/right.webp";
 import leftExample from "../../assets/engraving/left.webp";
 
 export interface EngravingSectionProps {
   texts: Record<EngravingPosition, string>;
+  fonts: Record<EngravingPosition,EngravingFontId>;
+  onFontChange:(position:EngravingPosition,font:EngravingFontId)=>void;
   positions: EngravingPosition[];
   multiple: boolean;
   applied: RingEngravingConfig[];
   status: EngravingStatus;
   busy: boolean;
   queued?: boolean;
+  error?:string;
   onTextChange: (position: EngravingPosition, text: string) => void;
   onPositionChange: (position: EngravingPosition) => void;
   onMultipleChange: (enabled: boolean) => void;
@@ -29,6 +33,7 @@ const PositionExample = ({ position }: { position: EngravingPosition }) => {
 
 export const EngravingSection = (props: EngravingSectionProps) => <section className="product-option-section product-engraving" aria-labelledby="engraving-heading">
   <h2 id="engraving-heading">Make it yours</h2>
+  {props.error&&<p className="engraving-font-error" role="alert">{props.error}</p>}
   <label className="engraving-multiple-option"><span><strong>Multiple positions</strong><small>Add a separate inscription to each position</small></span><input type="checkbox" role="switch" aria-label="Enable multiple position engraving" checked={props.multiple} onChange={event => props.onMultipleChange(event.target.checked)} /><span className="engraving-toggle" aria-hidden="true" /></label>
   <p className="product-selection-label">{props.multiple ? "Select engraving positions" : "Choose your engraving position"}</p>
   <div className="engraving-position-options" role="group" aria-label="Inside-band engraving position">
@@ -45,8 +50,9 @@ export const EngravingSection = (props: EngravingSectionProps) => <section class
     return <div className="engraving-input-row" key={position}>
       <form onSubmit={event => { event.preventDefault(); if (!error && !props.busy) props.onApply(position); }}>
         <label className="engraving-input-label" htmlFor={`ring-engraving-${position}`}>{label} inscription</label>
+        <div className="engraving-font-options" role="group" aria-label={`${label} engraving font`}>{ENGRAVING_FONTS.map(font=><button type="button" key={font.id} aria-pressed={props.fonts[position]===font.id} disabled={props.busy} onClick={()=>props.onFontChange(position,font.id)}><strong style={{fontFamily:`"${font.family}"`}}>Aa</strong><small>{font.label}</small></button>)}</div>
         <div className="engraving-input-box">
-          <input id={`ring-engraving-${position}`} type="text" value={text} onChange={event => props.onTextChange(position, event.target.value)} maxLength={48} placeholder="A name, a date, a little promise" autoComplete="off" aria-describedby={`engraving-help-${position}`} aria-invalid={tooLong || undefined} />
+          <input id={`ring-engraving-${position}`} type="text" value={text} style={{fontFamily:`"${engravingFont(props.fonts[position]).family}"`}} onChange={event => props.onTextChange(position, event.target.value)} maxLength={48} placeholder="A name, a date, a little promise" autoComplete="off" aria-describedby={`engraving-help-${position}`} aria-invalid={tooLong || undefined} />
           <button type="submit" aria-label={`Engrave ${position}`} disabled={Boolean(error) || props.busy || props.status === "applying"}>Engrave</button>
         </div>
         <div id={`engraving-help-${position}`} className={`engraving-input-help ${tooLong ? "has-error" : ""}`}><span>{tooLong ? error : "Letters, numbers and symbols"}</span><span>{Array.from(text).length}/{ENGRAVING_MAX_CHARACTERS}</span></div>

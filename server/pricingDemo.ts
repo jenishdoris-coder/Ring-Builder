@@ -4,7 +4,7 @@ import type { PriceSelection } from "../src/types/pricing.js";
 import { activeCatalog } from "./adminStore.js";
 import { sameOrigin } from "./adminAuth.js";
 import { publicCatalog } from "../src/admin/catalog.js";
-import { bandPriceKey, emptyPricing, getHeadStyles, headPriceKey, headStyleId, quoteRing } from "../src/utils/ringPricing.js";
+import { bandPriceKey, customerQuote, emptyPricing, getHeadStyles, headPriceKey, headStyleId, quoteRing } from "../src/utils/ringPricing.js";
 
 /** Fictional values for the explicitly labelled local demo. Never saved. */
 export const pricingDemoCatalog = (source: RingCatalog): RingCatalog => {
@@ -41,6 +41,6 @@ export default async function handler(request: IncomingMessage,response: ServerR
     const selection=JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as PriceSelection;
     if([selection.shapeId,selection.headStyleId,selection.bandId,selection.headMetalId,selection.bandMetalId,selection.size].some(value=>typeof value!=="string" || value.length>100) || !Number.isFinite(selection.carat)) return send(400,{error:"Invalid selection"});
     const quote=quoteRing(catalog,selection);
-    return send(200,{total:quote.total,currency:quote.currency,enabled:true,demo:true});
+    return send(200,{...customerQuote(quote),demo:true});
   } catch(error) { return send(error instanceof SyntaxError ? 400 : 503,{error:"The local pricing demo could not be loaded."}); }
 }

@@ -15,7 +15,7 @@ const bundle = await build({
   bundle: true, format: "esm", platform: "node", write: false, define: { "import.meta.env": "{}" },
   plugins: [{ name: "webgi-cpu-math", setup(builder) { builder.onResolve({ filter: /^webgi$/ }, () => ({ path: threeUrl, external: true })); } }],
 });
-const { RingEngraving, MultiRingEngraving, ENGRAVING_POSITIONS, engravingTextError, normalizeEngravingText } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
+const { RingEngraving, MultiRingEngraving, ENGRAVING_POSITIONS, ENGRAVING_FONTS,engravingTextError, normalizeEngravingText } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`);
 let masks = 0;
 globalThis.document = { createElement: () => {
   masks++;
@@ -63,6 +63,19 @@ for (const position of ENGRAVING_POSITIONS) {
   assert.equal(renderer.apply(root, { text: "Forever", position: position.id }), "ready", `${position.id} supports engraving under the live ring transform`);
   assert.equal(renderer.revision, revision);
   assert.equal(masks, count, "unchanged inscriptions reuse their mask and surface queries");
+}
+// A font-only edit changes its mask, while retaining the same fitted surface.
+let previousFont;
+for (const font of ENGRAVING_FONTS) {
+  const count = masks;
+  assert.equal(renderer.apply(root, { text: "Forever", position: "bottom", font: font.id }), "ready");
+  if (previousFont) assert.equal(masks, count + 1, "switching fonts creates one new mask");
+  assert.equal(renderer.matches({ text: "Forever", position: "bottom", font: font.id }), true);
+  const maskCount = masks, revision = renderer.revision;
+  assert.equal(renderer.apply(root, { text: "Forever", position: "bottom", font: font.id }), "ready");
+  assert.equal(masks, maskCount, "unchanged font/text reuse their mask");
+  assert.equal(renderer.revision, revision);
+  previousFont = font.id;
 }
 const oldExtension = metal.materialExtensions[0];
 assert.equal(renderer.apply(root, null), "idle");

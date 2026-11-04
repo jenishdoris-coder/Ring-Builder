@@ -1,5 +1,6 @@
 import type { RingCatalog } from "../types/catalog.js";
 import { getHeadStyles, headStyleId, validatePricing, LEGACY_HEAD_STYLE } from "../utils/ringPricing.js";
+import { ENVIRONMENTS, THUMBNAIL_PRESETS, thumbnailSignature } from "../config/appearance.js";
 
 export const slug = (name: string) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 export const catalogCounts = (catalog: RingCatalog) => ({ bands: catalog.shanks.length, heads: catalog.shapes.reduce((sum, shape) => sum + shape.carats.length, 0), shapes: catalog.shapes.length, metals: catalog.metals.length });
@@ -36,6 +37,16 @@ export const validateCatalog = (input: unknown, allowedPrefixes?: string[]): str
     }
   };
   identifiers(catalog.shanks, "band"); identifiers(catalog.shapes, "shape"); identifiers(catalog.metals, "metal");
+  if (catalog.appearance !== undefined) {
+    const a = catalog.appearance;
+    const environment = (value: any, studio = false) => value && (studio && value.id === "default" || ENVIRONMENTS.some(e => e.id === value.id)) && Number.isFinite(value.rotation) && value.rotation >= 0 && value.rotation <= 360 && Number.isFinite(value.intensity) && value.intensity >= .1 && value.intensity <= 3;
+    if (!a || !environment(a.studio,true) || !environment(a.portraits) || !environment(a.thumbnails?.environment) || !["preset","hdr"].includes(a.thumbnails?.mode) || !THUMBNAIL_PRESETS.some(p=>p.id===a.thumbnails?.preset) || !["silver","gold","rose"].includes(a.thumbnails?.metal)) errors.push("Choose valid thumbnail and environment settings.");
+    if (a?.thumbnailSet && (typeof a.thumbnailSet.signature !== "string" || a.thumbnailSet.signature.length > 500 || !a.thumbnailSet.images || typeof a.thumbnailSet.images !== "object" || Array.isArray(a.thumbnailSet.images) || Object.entries(a.thumbnailSet.images).length > 5000 || Object.entries(a.thumbnailSet.images).some(([key,url])=>key.length>2200 || !/^(head|shank):https?:\/\//.test(key) || !asset(url,true)))) errors.push("Generated thumbnail records are invalid.");
+    if (a?.thumbnails?.mode === "hdr" && environment(a.thumbnails.environment)) {
+      const models=[...catalog.shanks.map(item=>`shank:${item.file}`),...catalog.shapes.flatMap(shape=>shape.carats.map(head=>`head:${head.file}`))];
+      if (a.thumbnailSet?.signature !== thumbnailSignature(a.thumbnails) || models.some(key=>!a.thumbnailSet?.images?.[key])) errors.push("Generate the collection's HDR thumbnails in Appearance before saving this style.");
+    }
+  }
   if (catalog.headStyles !== undefined && !Array.isArray(catalog.headStyles)) return ["Head settings are invalid."];
   const styles = getHeadStyles(catalog);
   identifiers(styles, "head setting");

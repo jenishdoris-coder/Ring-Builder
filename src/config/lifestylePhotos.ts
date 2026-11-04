@@ -7,21 +7,21 @@ import type { PortraitFit } from "./portraitFit";
 // Revisioned IDs invalidate composites when the defaults change.
 export const LIFESTYLE_PHOTOS = [
   {
-    key: "dark", id: "lifestyle-dark-chin-v16", label: "Dark portrait", image: darkPortrait,
+    key: "dark", id: "lifestyle-dark-chin-v18", label: "Dark portrait", image: darkPortrait,
     center: [.605, .6105], fingerWidth: .0775, angle: -42,
     tilt: -7, roll: -3.5, fingerRadiusScale: 1.01, zTurn: -3.5,
     crop: { left: .23, top: .16, size: .68 },
     flipX: false,
   },
   {
-    key: "fair", id: "lifestyle-fair-chin-v16", label: "Fair portrait", image: fairPortrait,
+    key: "fair", id: "lifestyle-fair-chin-v18", label: "Fair portrait", image: fairPortrait,
     center: [.607, .6105], fingerWidth: .0785, angle: -42,
     tilt: -7, roll: -3.5, fingerRadiusScale: 1.01, zTurn: -3.5,
     crop: { left: .23, top: .16, size: .68 },
     flipX: false,
   },
   {
-    key: "lighter", id: "lifestyle-lighter-user-crop-v16", label: "Lighter portrait", image: lighterPortrait,
+    key: "lighter", id: "lifestyle-lighter-user-crop-v18", label: "Lighter portrait", image: lighterPortrait,
     center: [.6022, .6105], fingerWidth: .0795, angle: -42,
     tilt: -7, roll: -3.5, fingerRadiusScale: 1.01, zTurn: -3.5,
     crop: { left: .23, top: .16, size: .68 }, flipX: false,

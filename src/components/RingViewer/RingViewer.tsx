@@ -151,11 +151,13 @@ export interface RingViewerProps {
   cameraView?: RingCameraView | string;
   cameraViewRevision?: number;
   previewKey?: string;
+  portraitPreviewKey?: string;
   onPreviewImagesChange?: (key: string, images: RingPreviewImage[]) => void;
   detailPreviewRequest?: RingDetailPreviewRequest;
   onDetailPreviewChange?: (request: RingDetailPreviewRequest, image: RingPreviewImage | null) => void;
   isAutoRotating?: boolean;
   paused?: boolean;
+  metalEnvironment?: {url:string;rotation:number;intensity:number};
   handSkinTone?: number;
   handFitAdjustments?: HandFitAdjustments;
   onLoadingChange?: (loading: boolean) => void;
@@ -192,6 +194,9 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   const managerRef = useRef<any>(null);
   const diamondPluginRef = useRef<any>(null);
   const metalEnvironmentAssetRef = useRef<any>(null);
+  const metalLightingRef=useRef(props.metalEnvironment);metalLightingRef.current=props.metalEnvironment;
+  const metalEnvironmentUrlRef=useRef('');
+  const appliedMetalLightingRef=useRef('');
   const diamondEnvironmentAssetRef = useRef<any>(null);
   const applyCustomEnvironmentRef = useRef<(() => Promise<void>) | null>(null);
   const temporalAAPluginRef = useRef<any>(null);
@@ -506,17 +511,21 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
   // Both model changes and inscription changes share this capture path.
   // The caller owns the controls lock until the live transforms are restored.
-  const refreshGallery = useCallback(async (viewer: any, request = previewRequestRef.current) => {
+  const refreshGallery = useCallback(async (viewer: any, request = previewRequestRef.current, signal?: AbortSignal) => {
     const engraving = syncEngraving();
     if (!request.key || !request.callback || !initialRevealDoneRef.current) return;
     const key = request.key;
     const cached = previewCacheRef.current.get(key);
     if (cached) { request.callback(key, cached); return; }
     const controller = new AbortController();
+    const cancel = () => controller.abort();
+    signal?.addEventListener("abort", cancel, { once: true });
+    if (signal?.aborted) controller.abort();
     previewCaptureRef.current = controller;
     try {
       const position = engravingPhotoPositionRef.current;
       const images = await runRingImageJob(viewer, controller.signal, async () => {
+        if(appliedMetalLightingRef.current!==JSON.stringify(metalLightingRef.current))await applyCustomEnvironmentRef.current?.();
         const renderEnabled = viewer.renderEnabled;
         viewer.renderEnabled = false;
         handPreviewRef.current?.suspend();
@@ -531,6 +540,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     } catch (error) {
       if (!controller.signal.aborted) console.warn("Ring gallery capture failed", error);
     } finally {
+      signal?.removeEventListener("abort", cancel);
       if (previewCaptureRef.current === controller) previewCaptureRef.current = null;
     }
   }, [syncEngraving]);
@@ -654,7 +664,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
                   if (mat.metalness !== undefined) mat.metalness = 1.0;
                   if (mat.roughness !== undefined) mat.roughness = metalRoughness;
-                  if (mat.envMapIntensity !== undefined) mat.envMapIntensity = 1.0;
+                  if (mat.envMapIntensity !== undefined) mat.envMapIntensity = metalLightingRef.current?.intensity ?? 1;
                   if (mat.clearcoat !== undefined) mat.clearcoat = 0;
                   if (mat.clearcoatRoughness !== undefined) mat.clearcoatRoughness = 0;
                   if (mat.setDirty) mat.setDirty();
@@ -1720,6 +1730,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       };
 
       const importEnvironmentAssetFromUrl = async (url: string) => {
+        if(url===metalEnvironmentUrlRef.current&&metalEnvironmentAssetRef.current)return metalEnvironmentAssetRef.current;
+        if(url===CUSTOM_DIAMOND_ENV_URL&&diamondEnvironmentAssetRef.current)return diamondEnvironmentAssetRef.current;
         const importer =
           manager?.importer ||
           viewerAny?.getManager?.()?.importer ||
@@ -1732,9 +1744,10 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
 
       const applyCustomEnvironmentMaps = async () => {
         const diamondPlugin = diamondPluginRef.current;
+        const lighting = metalLightingRef.current;
         try {
           const [metalResult, diamondResult] = await Promise.allSettled([
-            importEnvironmentAssetFromUrl(CUSTOM_METAL_ENV_URL),
+            importEnvironmentAssetFromUrl(lighting?.url||CUSTOM_METAL_ENV_URL),
             importEnvironmentAssetFromUrl(CUSTOM_DIAMOND_ENV_URL),
           ]);
 
@@ -1746,7 +1759,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
               viewer.scene.environment = metalAsset;
             }
             if (viewer.scene?.environment) {
-              viewer.scene.environment.rotation = METAL_ENV_ROTATION;
+              viewer.scene.environment.rotation = lighting?.rotation??METAL_ENV_ROTATION;
             }
             if (viewer.scene) {
               viewer.scene.fixedEnvMapDirection = true;
@@ -1759,6 +1772,8 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
               disposeEnvironmentAsset(metalEnvironmentAssetRef.current);
               metalEnvironmentAssetRef.current = metalAsset;
             }
+            metalEnvironmentUrlRef.current=lighting?.url||CUSTOM_METAL_ENV_URL;
+            for(const root of [currentHeadRef.current,currentShankRef.current,...currentBandRefs.current])root?.traverse((mesh:any)=>{if(!mesh.isMesh||isDiamondMesh(mesh))return;for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material]){material.envMapIntensity=lighting?.intensity??1;material.setDirty?.();}});
           } else {
             console.warn("[RingViewer] Failed to load metal environment", metalResult.reason);
           }
@@ -1774,6 +1789,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
             console.warn("[RingViewer] Failed to load diamond environment", diamondResult.reason);
           }
 
+          if (metalResult.status === "fulfilled") appliedMetalLightingRef.current=JSON.stringify(lighting);
           viewer.setDirty?.();
         } catch (error) {
           console.warn("[RingViewer] Failed to apply custom metal/diamond environment maps", error);
@@ -2472,7 +2488,7 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       if (controller.signal.aborted || viewerRef.current !== viewer) return;
       lockViewerControls();
       props.onLoadingChange?.(true);
-      try { await refreshGallery(viewer); }
+      try { await refreshGallery(viewer, undefined, controller.signal); }
       finally {
         if (viewerRef.current !== viewer) return;
         unlockViewerControls();
@@ -2486,14 +2502,16 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
       }
     };
     void update();
-    return () => { controller.abort(); previewCaptureRef.current?.abort(); };
+    // Cancel only this gallery refresh. An engraving-only edit must let a
+    // portrait of the same visible ring finish instead of restarting it.
+    return () => { controller.abort(); };
   }, [isViewerReady, props.previewKey, refreshGallery, lockViewerControls, unlockViewerControls]);
 
   // Generate one high-resolution photo only when its lightbox is opened.
   // Ordinary gallery updates retain their inexpensive 1200px render path.
   useEffect(() => {
     const request = props.detailPreviewRequest;
-    if (!isViewerReady || !request || request.key !== props.previewKey) return;
+    if (!isViewerReady || !request || request.key !== (isLifestyleView(request.viewId) ? props.portraitPreviewKey ?? props.previewKey : props.previewKey)) return;
     const viewer = viewerRef.current;
     if (!viewer) return;
     const controller = new AbortController();
@@ -2556,12 +2574,21 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
     void renderDetail();
     // Scroll, pinch and lightbox state may temporarily remove this request.
     // Finish an already scheduled job; model changes/unmount cancel it below.
-  }, [isViewerReady, props.previewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, JSON.stringify(props.detailPreviewRequest?.portraitFit), JSON.stringify(props.detailPreviewRequest?.environment), props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
+  }, [isViewerReady, props.previewKey, props.portraitPreviewKey, props.detailPreviewRequest?.key, props.detailPreviewRequest?.viewId, props.detailPreviewRequest?.resolution, props.detailPreviewRequest?.engravingPosition, JSON.stringify(props.detailPreviewRequest?.portraitFit), JSON.stringify(props.detailPreviewRequest?.environment), props.onDetailPreviewChange, lockViewerControls, unlockViewerControls]);
+
+  useEffect(() => {
+    const prefixes = [props.previewKey, props.portraitPreviewKey].filter(Boolean).map(key => `${key}:`);
+    for (const [key, controller] of detailJobsRef.current) {
+      if (prefixes.some(prefix => key.startsWith(prefix))) continue;
+      controller.abort();
+      detailJobsRef.current.delete(key);
+    }
+  }, [props.previewKey, props.portraitPreviewKey]);
 
   useEffect(() => () => {
     for (const controller of detailJobsRef.current.values()) controller.abort();
     detailJobsRef.current.clear();
-  }, [props.previewKey]);
+  }, []);
 
   // The studio stays mounted so its selected angle, models and photos survive
   // try-on. Stop its RAF and image work while the camera owns the GPU.
@@ -2580,6 +2607,15 @@ const RingViewer: React.FC<RingViewerProps> = (props = {}) => {
   }, [isViewerReady, props.paused, setViewerControlsEnabled]);
 
   // ── Camera view prop handler ───────────────────────────────────────────────
+  useEffect(()=>{
+    const viewer=viewerRef.current;
+    if(!isViewerReady||!viewer||appliedMetalLightingRef.current===JSON.stringify(props.metalEnvironment))return;
+    const controller=new AbortController();
+    void runRingImageJob(viewer,controller.signal,async()=>{if(appliedMetalLightingRef.current!==JSON.stringify(metalLightingRef.current))await applyCustomEnvironmentRef.current?.();}).catch(error=>{if(!controller.signal.aborted)console.warn('Studio lighting update failed',error);});
+    return()=>controller.abort();
+  },[isViewerReady,props.metalEnvironment?.url,props.metalEnvironment?.rotation,props.metalEnvironment?.intensity]);
+
+  // Apply camera changes after shared image/lighting work has settled.
   useEffect(() => {
     if (!isViewerReady || !props.cameraView || props.paused) return;
     const request = `${props.cameraView}:${props.cameraViewRevision ?? 0}:${props.cameraView === "engraving" ? props.engravingFocusPosition : ""}`;
